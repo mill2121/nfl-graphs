@@ -12,5 +12,16 @@
  */
 
 return array(
-    // ...
+    'db' => array(
+        'driver'         => 'PDO',
+        'dsn'            => 'pgsql:dbname=nfldb;host=localhost;port=5432',
+        'username'      => 'postgres',
+        'password'       => 'SPQR509bc'
+    ),
+    'service_manager' => array(
+        'factories' => array(
+            'Zend\Db\Adapter\Adapter'
+            => 'Zend\Db\Adapter\AdapterServiceFactory',
+        ),
+    ),
 );

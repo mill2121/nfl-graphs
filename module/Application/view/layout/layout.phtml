@@ -18,10 +18,14 @@
 
         <!-- Scripts -->
         <?php echo $this->headScript()
-            ->prependFile($this->basePath('js/bootstrap.min.js'))
-            ->prependFile($this->basePath('js/jquery.min.js'))
-            ->prependFile($this->basePath('js/respond.min.js'), 'text/javascript', array('conditional' => 'lt IE 9',))
-            ->prependFile($this->basePath('js/html5shiv.js'),   'text/javascript', array('conditional' => 'lt IE 9',))
+            ->prependFile($this->basePath('js/players/players.js'))
+            ->prependFile($this->basePath('lib/highcharts-ng/src/highcharts-ng.js'))
+            ->prependFile($this->basePath('lib/highcharts/js/highcharts.src.js'))
+            ->prependFile($this->basePath('lib/angularjs/angular.min.js'))
+            ->prependFile($this->basePath('lib/bootstrap/bootstrap.min.js'))
+            ->prependFile($this->basePath('lib/jquery/jquery.min.js'))
+            ->prependFile($this->basePath('lib/respond/respond.min.js'), 'text/javascript', array('conditional' => 'lt IE 9',))
+            ->prependFile($this->basePath('lib/html5shiv/html5shiv.js'),   'text/javascript', array('conditional' => 'lt IE 9',))
         ; ?>
 
     </head>

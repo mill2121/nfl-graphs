@@ -9,10 +9,12 @@
 
 namespace Application;
 
+use NflGraphs;
+use Zend\ModuleManager\Feature\ViewHelperProviderInterface;
 use Zend\Mvc\ModuleRouteListener;
 use Zend\Mvc\MvcEvent;
 
-class Module
+class Module implements ViewHelperProviderInterface
 {
     public function onBootstrap(MvcEvent $e)
     {
@@ -34,6 +36,18 @@ class Module
                     __NAMESPACE__ => __DIR__ . '/src/' . __NAMESPACE__,
                 ),
             ),
+        );
+    }
+
+    public function getViewHelperConfig()
+    {
+        return array(
+            'factories' => array(
+                'ngInit' => function($sm) {
+                    $helper = new NflGraphs\View\Helper\NgInit ;
+                    return $helper;
+                }
+            )
         );
     }
 }
