@@ -18,6 +18,7 @@
 
         <!-- Scripts -->
         <?php echo $this->headScript()
+            ->prependFile($this->basePath('js/index/home-page.js'))
             ->prependFile($this->basePath('js/players/players.js'))
             ->prependFile($this->basePath('lib/highcharts-ng/src/highcharts-ng.js'))
             ->prependFile($this->basePath('lib/highcharts/js/highcharts.src.js'))

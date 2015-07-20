@@ -1,4 +1,5 @@
-<div ng-app="home-page" ng-controller="HomePageCtrl">
+<div ng-app="home-page" ng-controller="HomePageCtrl"
+    <?php echo $this->ngInit('playerData') ?>>
     <h1>Home Page</h1>
     <highchart id="chart1" config="chartConfig"></highchart>
 </div>
