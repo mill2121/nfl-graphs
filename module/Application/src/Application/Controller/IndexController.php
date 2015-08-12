@@ -12,8 +12,10 @@ class IndexController extends AbstractActionController
     public function indexAction()
     {
         $playerData = $this->getPlayerTable()->getPlayerData();
+        $gameData = $this->getPlayerTable()->getGameData();
         return new ViewModel(array(
-            'playerData' => $playerData
+            'playerData' => $playerData,
+            'gameData' => $gameData,
         ));
     }
 

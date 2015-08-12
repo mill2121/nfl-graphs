@@ -17,7 +17,7 @@ class NgInit extends AbstractHelper
                     } else {
                         $keyNm = $name;
                     }
-                    $output[] = $key . '=' . htmlspecialchars(Json::encode($this->view->$name), ENT_QUOTES) . ';';
+                    $output[] = $keyNm . '=' . htmlspecialchars(Json::encode($this->view->$name), ENT_QUOTES) . ';';
                 }
             }
             if (count($output) > 0) {

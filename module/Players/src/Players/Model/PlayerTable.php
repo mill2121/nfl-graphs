@@ -13,52 +13,121 @@ class PlayerTable
         $this->tableGateway = $tableGateway;
     }
 
+    public function getGameData()
+    {
+        $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute("
+SELECT g.week, g.season_type, t.name, play.pos_team, g.home_team, g.away_team, tc.logo_url, play.time, g.home_score, g.away_score, g.finished, play.yardline, play.down, play.yards_to_go,
+  q.* FROM (
+  SELECT play.gsis_id, MAX(play.play_id) AS play_id FROM public.game g
+  JOIN public.play play ON play.gsis_id = g.gsis_id
+  WHERE g.start_time < now()
+
+  -- Uncomment to test the gauges
+  AND pos_team <> 'UNK'
+
+  GROUP BY play.gsis_id
+) q
+JOIN public.play play ON (q.gsis_id = play.gsis_id AND q.play_id = play.play_id)
+JOIN public.game g ON (g.gsis_id = play.gsis_id)
+
+-- *************************************
+-- Uncomment when season starts!!!
+-- *************************************
+JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
+--JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
+
+JOIN public.team t ON t.team_id = play.pos_team
+JOIN nfl_graphs.team_colors tc ON (play.pos_team = tc.team_id)
+ORDER BY q.gsis_id;
+        ");
+        $resultSet->buffer();
+        $results = array();
+        foreach ($resultSet as $row) {
+            array_push($results, $row);
+        }
+        return $results;
+    }
+
     public function getPlayerData()
     {
-        $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute(
-            "SELECT
+        $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute("
+SELECT
   q.*,
   (q.yards / (SUM(q.yards)
   OVER (PARTITION BY q.team))) * 100.0 AS percentage
 FROM (
     SELECT
-         DISTINCT
          p.full_name,
-         p.team,
+         left(p.first_name, 1) || '. ' || p.last_name AS abbr_name,
+         g.gsis_id AS game,
+         g.home_team = t.team_id AS home_team,
+         CASE WHEN g.home_team = t.team_id THEN g.home_score ELSE g.away_score END AS score,
+         t.city || ' ' || t.name AS team,
+         tc.primary_color AS color,
+         tc.border_color AS border_color,
          'RECEIVING' AS play_type,
-         SUM(pp.receiving_yds)       AS yards,
-         ARRAY_AGG(play.description) AS plays
+         SUM(pp.receiving_yds)             AS yards,
+         SUM(ap.passing_cmp) || '/' || SUM(ap.passing_att) || ' for ' || SUM(pp.receiving_yds) || ' YDs and '
+            || SUM(ap.receiving_tds) || ' TD(s)'
+                                           AS stats
        FROM public.player p
          JOIN public.play_player pp ON pp.player_id = p.player_id
          JOIN public.play play
            ON play.play_id = pp.play_id AND play.gsis_id = pp.gsis_id AND play.drive_id = pp.drive_id
+         JOIN public.agg_play ap
+           ON play.play_id = ap.play_id AND play.gsis_id = ap.gsis_id AND play.drive_id = ap.drive_id
+         JOIN public.team t ON t.team_id = play.pos_team
+         JOIN nfl_graphs.team_colors tc ON tc.team_id = t.team_id
          JOIN public.game g ON g.gsis_id = pp.gsis_id
+
+         -- *************************************
+         -- Uncomment when season starts!!!
+         -- *************************************
+         JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
+         --JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
        WHERE
-         pp.gsis_id = 2014122106 :: gameid
-    AND (pp.receiving_yds > 0)
-       GROUP BY g.gsis_id, p.full_name, p.team
+      g.start_time < now()
+       GROUP BY g.gsis_id, p.full_name, p.first_name, p.last_name, t.team_id, t.city, t.name, tc.primary_color, tc.border_color
 
        UNION ALL
 
       SELECT
-         DISTINCT
          p.full_name,
-         p.team,
+        left(p.first_name, 1) || '. ' || p.last_name AS abbr_name,
+         g.gsis_id AS game,
+         g.home_team = t.team_id AS home_team,
+         CASE WHEN g.home_team = t.team_id THEN g.home_score ELSE g.away_score END AS score,
+         t.city || ' ' || t.name AS team,
+         tc.secondary_color AS color,
+         tc.border_color AS border_color,
         'RUSHING' AS play_type,
-         SUM(pp.rushing_yds)       AS yards,
-         ARRAY_AGG(play.description) AS plays
+         SUM(pp.rushing_yds)               AS yards,
+         round(SUM(ap.rushing_yds) / cast(SUM(ap.rushing_att) as NUMERIC), 1) || ' YPC for ' || SUM(ap.rushing_yds) || ' YDs and '
+              || SUM(ap.rushing_tds) || ' TD(s)'
+                                           AS stats
        FROM public.player p
          JOIN public.play_player pp ON pp.player_id = p.player_id
          JOIN public.play play
            ON play.play_id = pp.play_id AND play.gsis_id = pp.gsis_id AND play.drive_id = pp.drive_id
+         JOIN public.agg_play ap
+           ON play.play_id = ap.play_id AND play.gsis_id = ap.gsis_id AND play.drive_id = ap.drive_id
+         JOIN public.team t ON t.team_id = play.pos_team
+         JOIN nfl_graphs.team_colors tc ON tc.team_id = t.team_id
          JOIN public.game g ON g.gsis_id = pp.gsis_id
+
+         -- *************************************
+         -- Uncomment when season starts!!!
+         -- *************************************
+         JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
+         --JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
        WHERE
-         pp.gsis_id = 2014122106 :: gameid
-    AND (pp.rushing_yds > 0)
-       GROUP BY g.gsis_id, p.full_name, p.team
+      g.start_time < now()
+       GROUP BY g.gsis_id, p.full_name, p.first_name, p.last_name, t.team_id, t.city, t.name, tc.secondary_color, tc.border_color
      ) q
-ORDER BY team, play_type, full_name ASC;
-        ");
+WHERE q.yards > 0
+ORDER BY game, home_team DESC, play_type, full_name ASC;
+"
+        );
         $resultSet->buffer();
         $results = array();
         foreach ($resultSet as $row) {
@@ -111,5 +180,31 @@ ORDER BY team, play_type, full_name ASC;
     public function deletePlayer($id)
     {
         $this->tableGateway->delete(array('player_id' => (int)$id));
+    }
+
+    public static function pgArrayToPhp($text)
+    {
+        if (is_null($text)) {
+            return array();
+        } else if (is_string($text) && $text != '{}') {
+            $text = substr($text, 1, -1); // Removes starting "{" and ending "}"
+
+            $values = explode(',', $text);
+            $fixedValues = array();
+            foreach ($values as $value) {
+                if (substr($value, 0, 1) == '"') {
+                    $value = substr($value, 1);
+                }
+                if (substr($value, -1, 1) == '"') {
+                    $value = substr($value, 0, -1);
+                }
+                $value = str_replace('\\"', '"', $value);
+                $fixedValues[] = $value;
+            }
+
+            return $fixedValues;
+        } else {
+            return array();
+        }
     }
 }
