@@ -4,6 +4,8 @@ namespace Application\Controller;
 
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\ViewModel;
+use Zend\View\Model\JsonModel;
+use Zend\Debug\Debug;
 
 class IndexController extends AbstractActionController
 {
@@ -15,7 +17,15 @@ class IndexController extends AbstractActionController
         $gameData = $this->getPlayerTable()->getGameData();
         return new ViewModel(array(
             'playerData' => $playerData,
-            'gameData' => $gameData,
+            'gameData' => $gameData
+        ));
+    }
+
+    public function getPlayDataAction()
+    {
+        $playData = $this->getPlayerTable()->getPlayData();
+        return new JsonModel(array(
+            'playData' => $playData
         ));
     }
 

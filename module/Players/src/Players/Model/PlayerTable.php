@@ -13,6 +13,39 @@ class PlayerTable
         $this->tableGateway = $tableGateway;
     }
 
+    /**
+     * Get the play by play information so that you can populate the time of possession area chart.
+     * @return array
+     */
+    public function getPlayData()
+    {
+        $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute("
+SELECT d.gsis_id, g.home_team, (g.home_team = d.pos_team) AS is_home_team, d.drive_id, d.start_time,
+  nfl_graphs.get_seconds(d.start_time) AS start_time_seconds,
+  nfl_graphs.get_yardline(d.start_field) AS start_field,
+  nfl_graphs.get_yardline(d.end_field) AS end_field,
+  nfl_graphs.get_yardline(p.yardline) as yardline,
+  d.end_time, d.pos_team, d.result, p.play_id, p.description, p.time
+FROM public.game g
+JOIN public.drive d ON (d.gsis_id = g.gsis_id)
+JOIN public.play p ON (p.gsis_id = d.gsis_id AND p.drive_id = d.drive_id)
+JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
+WHERE g.start_time < now()
+      --and p.yardline IS NULL
+ORDER BY d.gsis_id DESC, d.drive_id, p.play_id;
+        ");
+        $resultSet->buffer();
+        $results = array();
+        foreach ($resultSet as $row) {
+            array_push($results, $row);
+        }
+        return $results;
+    }
+
+    /**
+     * Get the current live game data, like score/time/downs/current drive/etc
+     * @return array
+     */
     public function getGameData()
     {
         $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute("
@@ -33,12 +66,12 @@ JOIN public.game g ON (g.gsis_id = play.gsis_id)
 -- *************************************
 -- Uncomment when season starts!!!
 -- *************************************
-JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
---JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
+--JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
+JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
 
 JOIN public.team t ON t.team_id = play.pos_team
 JOIN nfl_graphs.team_colors tc ON (play.pos_team = tc.team_id)
-ORDER BY q.gsis_id;
+ORDER BY q.gsis_id DESC;
         ");
         $resultSet->buffer();
         $results = array();
@@ -48,6 +81,10 @@ ORDER BY q.gsis_id;
         return $results;
     }
 
+    /**
+     * Get the individual player data, shows how much an individual player is contributing to a team's offense.
+     * @return array
+     */
     public function getPlayerData()
     {
         $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute("
@@ -83,8 +120,8 @@ FROM (
          -- *************************************
          -- Uncomment when season starts!!!
          -- *************************************
-         JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
-         --JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
+         --JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
+         JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
        WHERE
       g.start_time < now()
        GROUP BY g.gsis_id, p.full_name, p.first_name, p.last_name, t.team_id, t.city, t.name, tc.primary_color, tc.border_color
@@ -118,14 +155,14 @@ FROM (
          -- *************************************
          -- Uncomment when season starts!!!
          -- *************************************
-         JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
-         --JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
+         --JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
+         JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
        WHERE
       g.start_time < now()
        GROUP BY g.gsis_id, p.full_name, p.first_name, p.last_name, t.team_id, t.city, t.name, tc.secondary_color, tc.border_color
      ) q
 WHERE q.yards > 0
-ORDER BY game, home_team DESC, play_type, full_name ASC;
+ORDER BY game DESC, home_team DESC, play_type, full_name ASC;
 "
         );
         $resultSet->buffer();

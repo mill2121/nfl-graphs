@@ -88,6 +88,9 @@ return array(
             'error/404'               => __DIR__ . '/../view/error/404.phtml',
             'error/index'             => __DIR__ . '/../view/error/index.phtml',
         ),
+        'strategies' => array(
+            'ViewJsonStrategy',
+        ),
         'template_path_stack' => array(
             __DIR__ . '/../view',
         ),
@@ -96,6 +99,17 @@ return array(
     'console' => array(
         'router' => array(
             'routes' => array(
+                'home' => array(
+                    'type' => 'literal',
+                    'options' => array(
+                        'route' => '/',
+                        'defaults' => array(
+                            'controller' => 'Application\Controller\IndexController',
+                            'action' => 'index',
+                        ),
+                    ),
+                ),
+
             ),
         ),
     ),

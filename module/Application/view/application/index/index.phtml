@@ -4,10 +4,14 @@
         <div style="float:left; display: inline-block; width:60%; padding-left:15px">
             <ul class="nav nav-tabs" role="tablist">
                 <li role="presentation" class="active">
-                    <a href="#offense" aria-controls="offense" role="tab" data-toggle="tab">Team Offense</a>
+                    <a href="#offense" aria-controls="offense" role="tab" data-toggle="tab" ng-click="currentTab = 'offense'">
+                        Team Offense
+                    </a>
                 </li>
                 <li role="presentation">
-                    <a href="#drives" aria-controls="drives" role="tab" data-toggle="tab">Team Drives</a>
+                    <a href="#drives" aria-controls="drives" role="tab" data-toggle="tab" ng-click="currentTab = 'drives'">
+                        Team Drives
+                    </a>
                 </li>
             </ul>
         </div>
@@ -23,13 +27,18 @@
         <div class="tab-content" style="float:left; display: inline-block; width:60%;">
             <div role="tabpanel" class="tab-pane active" id="offense">
                 <highchart ng-repeat="(key, team) in teams"
-                    style="float:left;display: inline-block; width:50%;"
+                    style="float:left;display: inline-block; width:50%; height:260px"
                            id="chart{{key}}"
                            config="chartConfigs[key]">
                 </highchart>
             </div>
             <div role="tabpanel" class="tab-pane" id="drives">
-                <div style="width:60%">Drives</div>
+                <div style="width:60%">
+                    <highchart ng-repeat="(key, fieldPossessionConfig) in fieldPossessionConfigs"
+                        id="fieldPossessionConfig{{key}}"
+                        config="fieldPossessionConfigs[key]">
+                    </highchart>
+                </div>
             </div>
         </div>
         <div style="float:left; display: inline-block; width:39%">
