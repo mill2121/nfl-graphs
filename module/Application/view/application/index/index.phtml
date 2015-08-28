@@ -33,11 +33,16 @@
                 </highchart>
             </div>
             <div role="tabpanel" class="tab-pane" id="drives">
-                <div style="width:60%">
+                <div>
                     <highchart ng-repeat="(key, fieldPossessionConfig) in fieldPossessionConfigs"
+                               ng-if="currentTab == 'drives' && !loadingPlayData"
+                        style="float:left;display: inline-block;width:100%;height:260px;padding:10px 25px 0 25px"
                         id="fieldPossessionConfig{{key}}"
                         config="fieldPossessionConfigs[key]">
                     </highchart>
+                    <div ng-if="currentTab == 'drives' && loadingPlayData"
+                         style="float:left;display: inline-block;width:100%;height:260px;padding:10px 25px 0 25px">
+                    </div>
                 </div>
             </div>
         </div>

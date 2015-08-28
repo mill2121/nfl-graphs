@@ -26,19 +26,85 @@
             });
 
             $scope.$watch('currentTab', function (currentTab) {
-                if (currentTab) {
+                if (currentTab == 'drives') {
+                    $scope.loadingPlayData = true;
                     $http.post("application/index/get-play-data").success(function (data) {
-                        $scope.playData = data;
+                        $scope.loadingPlayData = false;
+                        $scope.playData = data.playData;
                     });
                 }
             });
 
             $scope.$watch('playData', function (playData) {
                 if (playData) {
+                    var formattedPlayData = $scope.formatPlayData(playData);
                     $scope.fieldPossessionConfigs = [];
-                    $scope.fieldPossessionConfigs.push($scope.formatFieldPossessionConfig(playData));
+                    angular.forEach(formattedPlayData, function (formattedPlayRow) {
+                        $scope.fieldPossessionConfigs.push($scope.formatFieldPossessionConfig(formattedPlayRow));
+                    });
                 }
             });
+
+            /**
+             * Format the play by play data in groups so it can be used by highcharts
+             * @param playData
+             */
+            $scope.formatPlayData = function (playData) {
+                var gsisId = playData[0]['gsis_id'], firstTeam, secondTeam, formattedPlayData = [],
+                    firstTeamData = [], secondTeamData = [];
+                angular.forEach(playData, function (play, key) {
+                    if (gsisId != play['gsis_id']) {
+                        gsisId = play['gsis_id'];
+                        formattedPlayData.push([
+                            {
+                                name: firstTeam,
+                                data: firstTeamData,
+                                threshold: -30
+                            },
+                            {
+                                name: secondTeam,
+                                data: secondTeamData,
+                                threshold: -30
+                            }
+                        ]);
+                        firstTeam = null;
+                        secondTeam = null;
+                        firstTeamData = [];
+                        secondTeamData = [];
+                    }
+                    if (!firstTeam) {
+                        firstTeam = play['pos_team'];
+                    }
+                    if (firstTeam == play['pos_team']) {
+                        firstTeamData.push($scope.getRelevantPlayData(play));
+                        secondTeamData.push($scope.getNullPoint(play.time_seconds));
+                    } else {
+                        if (!secondTeam) {
+                            secondTeam = play['pos_team'];
+                        }
+                        secondTeamData.push($scope.getRelevantPlayData(play));
+                        firstTeamData.push($scope.getNullPoint(play.time_seconds));
+                    }
+                });
+                return formattedPlayData;
+            };
+
+            $scope.getNullPoint = function (time) {
+                return {
+                    x: time,
+                    y: null,
+                    name: 'N/A'
+                }
+            };
+
+            $scope.getRelevantPlayData = function (play)
+            {
+                return {
+                    x: play.time_seconds,
+                    y: play.yardline,
+                    name: play.description
+                };
+            };
 
             /**
              * Formats the player data, row by row, and groups it into team data.
@@ -311,6 +377,7 @@
             };
 
             $scope.formatFieldPossessionConfig = function(playData) {
+                playData.threshold = 50;
                 var fieldPossessionConfig = {
                     options: {
                         chart: {
@@ -318,12 +385,12 @@
                             spacingBottom: 30
                         },
                         title: {
-                            text: 'Fruit consumption *'
+                            text: 'Time of Possession'
                         },
                         subtitle: {
-                            text: '* Jane\'s banana consumption is unknown',
+                            text: 'Game Time (minutes)',
                             floating: true,
-                            align: 'right',
+                            align: 'center',
                             verticalAlign: 'bottom',
                             y: 15
                         },
@@ -338,12 +405,18 @@
                             backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
                         },
                         xAxis: {
-                            categories: ['Apples', 'Pears', 'Oranges', 'Bananas', 'Grapes', 'Plums', 'Strawberries', 'Raspberries']
+                            //categories: ['Apples', 'Pears', 'Oranges', 'Bananas', 'Grapes', 'Plums', 'Strawberries', 'Raspberries'],
+                            labels: {
+                                enabled: false
+                            }
                         },
                         yAxis: {
                             title: {
-                                text: 'Y-Axis'
+                                text: 'Yardline'
                             },
+                            min: -20,
+                            max: 80,
+                            endOnTick:false,
                             labels: {
                                 formatter: function () {
                                     return this.value;
@@ -363,15 +436,9 @@
                         },
                         credits: {
                             enabled: false
-                        },
-                        series: [{
-                                     name: 'John',
-                                     data: [0, 1, 4, 4, 5, 2, 3, 7]
-                                 }, {
-                                     name: 'Jane',
-                                     data: [1, 0, 3, null, 3, 1, 2, 1]
-                                 }]
-                    }
+                        }
+                    },
+                    series: playData
                 };
                 return fieldPossessionConfig;
             };

@@ -22,6 +22,7 @@ class PlayerTable
         $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute("
 SELECT d.gsis_id, g.home_team, (g.home_team = d.pos_team) AS is_home_team, d.drive_id, d.start_time,
   nfl_graphs.get_seconds(d.start_time) AS start_time_seconds,
+  nfl_graphs.get_seconds(p.time) AS time_seconds,
   nfl_graphs.get_yardline(d.start_field) AS start_field,
   nfl_graphs.get_yardline(d.end_field) AS end_field,
   nfl_graphs.get_yardline(p.yardline) as yardline,
