@@ -27,6 +27,7 @@
 
             $scope.$watch('currentTab', function (currentTab) {
                 if (currentTab == 'drives') {
+                    console.log(currentTab);
                     $scope.loadingPlayData = true;
                     $http.post("application/index/get-play-data").success(function (data) {
                         $scope.loadingPlayData = false;
@@ -45,13 +46,22 @@
                 }
             });
 
+            $scope.convertHex = function (hex,opacity){
+                hex = hex.replace('#','');
+                var r = parseInt(hex.substring(0,2), 16),
+                g = parseInt(hex.substring(2,4), 16),
+                b = parseInt(hex.substring(4,6), 16);
+                return 'rgba('+r+','+g+','+b+','+opacity/100+')';
+            };
+
+
             /**
              * Format the play by play data in groups so it can be used by highcharts
              * @param playData
              */
             $scope.formatPlayData = function (playData) {
                 var gsisId = playData[0]['gsis_id'], firstTeam, secondTeam, formattedPlayData = [],
-                    firstTeamData = [], secondTeamData = [];
+                    firstTeamData = [], secondTeamData = [], firstTeamColors, secondTeamColors;
                 angular.forEach(playData, function (play, key) {
                     if (gsisId != play['gsis_id']) {
                         gsisId = play['gsis_id'];
@@ -59,11 +69,15 @@
                             {
                                 name: firstTeam,
                                 data: firstTeamData,
+                                fillColor: $scope.convertHex(firstTeamColors['primary'],75),
+                                color: firstTeamColors['secondary'],
                                 threshold: -30
                             },
                             {
                                 name: secondTeam,
                                 data: secondTeamData,
+                                fillColor: $scope.convertHex(secondTeamColors['primary'],75),
+                                color: secondTeamColors['secondary'],
                                 threshold: -30
                             }
                         ]);
@@ -74,6 +88,10 @@
                     }
                     if (!firstTeam) {
                         firstTeam = play['pos_team'];
+                        firstTeamColors = {
+                            primary: play['primary_color'],
+                            secondary: play['secondary_color']
+                        };
                     }
                     if (firstTeam == play['pos_team']) {
                         firstTeamData.push($scope.getRelevantPlayData(play));
@@ -81,6 +99,10 @@
                     } else {
                         if (!secondTeam) {
                             secondTeam = play['pos_team'];
+                            secondTeamColors = {
+                                primary: play['primary_color'],
+                                secondary: play['secondary_color']
+                            };
                         }
                         secondTeamData.push($scope.getRelevantPlayData(play));
                         firstTeamData.push($scope.getNullPoint(play.time_seconds));
@@ -382,10 +404,11 @@
                     options: {
                         chart: {
                             type: 'area',
+                            backgroundColor:'transparent',
                             spacingBottom: 30
                         },
                         title: {
-                            text: 'Time of Possession'
+                            text: null
                         },
                         subtitle: {
                             text: 'Game Time (minutes)',
@@ -405,17 +428,20 @@
                             backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
                         },
                         xAxis: {
+                            lineColor: '#666666',
+                            tickColor: '#666666',
                             //categories: ['Apples', 'Pears', 'Oranges', 'Bananas', 'Grapes', 'Plums', 'Strawberries', 'Raspberries'],
                             labels: {
                                 enabled: false
                             }
                         },
                         yAxis: {
+                            gridLineColor: '#666666',
                             title: {
                                 text: 'Yardline'
                             },
-                            min: -20,
-                            max: 80,
+                            min: -50,
+                            max: 50,
                             endOnTick:false,
                             labels: {
                                 formatter: function () {

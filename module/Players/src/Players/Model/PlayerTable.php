@@ -26,9 +26,10 @@ SELECT d.gsis_id, g.home_team, (g.home_team = d.pos_team) AS is_home_team, d.dri
   nfl_graphs.get_yardline(d.start_field) AS start_field,
   nfl_graphs.get_yardline(d.end_field) AS end_field,
   nfl_graphs.get_yardline(p.yardline) as yardline,
-  d.end_time, d.pos_team, d.result, p.play_id, p.description, p.time
+  d.end_time, d.pos_team, tc.primary_color, tc.secondary_color, d.result, p.play_id, p.description, p.time
 FROM public.game g
 JOIN public.drive d ON (d.gsis_id = g.gsis_id)
+JOIN nfl_graphs.team_colors tc ON (d.pos_team = tc.team_id)
 JOIN public.play p ON (p.gsis_id = d.gsis_id AND p.drive_id = d.drive_id)
 JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
 WHERE g.start_time < now()

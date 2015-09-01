@@ -16,21 +16,50 @@
             </ul>
         </div>
         <div style="float:left; display: inline-block; width:19%; text-align:center; font-size:1.25em; text-decoration: underline">
-            Scoreboard
+            <span ng-show="currentTab == 'offense'">Scoreboard</span>
         </div>
         <div style="float:left; display: inline-block; width:20%; text-align:center; font-size:1.25em; text-decoration: underline;">
-            Current Drive
+            <span ng-show="currentTab == 'offense'">Current Drive</span>
         </div>
     </div>
     <div style="width:100%">
 
-        <div class="tab-content" style="float:left; display: inline-block; width:60%;">
+        <div class="tab-content">
             <div role="tabpanel" class="tab-pane active" id="offense">
-                <highchart ng-repeat="(key, team) in teams"
-                    style="float:left;display: inline-block; width:50%; height:260px"
-                           id="chart{{key}}"
-                           config="chartConfigs[key]">
-                </highchart>
+                <div ng-repeat="(key, team) in teams">
+                    <highchart
+                        style="float:left;display: inline-block; width:30%; height:260px"
+                        id="chart{{key}}"
+                        config="chartConfigs[key]">
+                    </highchart>
+                    <div ng-if="(key % 2)" style="float:left;display: inline-block; width:39%">
+                        <div style="width:50%; float:left;display: inline-block;">
+                            <table class="scoreboard">
+                                <tbody>
+                                <tr>
+                                    <td>{{gameData[(key - 1) / 2].home_team}}</td>
+                                    <td></td>
+                                    <td>{{gameData[(key - 1) / 2].away_team}}</td>
+                                </tr>
+                                <tr style="font-size:2.5em; font-weight: bold">
+                                    <td>{{gameData[(key - 1) / 2].home_score}}</td>
+                                    <td>-</td>
+                                    <td>{{gameData[(key - 1) / 2].away_score}}</td>
+                                </tr>
+                                <tr style="font-size:1.5em">
+                                    <td colspan="3">{{getQuarterTime(gameData[(key - 1) / 2].time)}}</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="width:50%; float:left; display:inline-block; margin-top:20px; min-height:220px">
+                            <highchart
+                                id="gauge{{key}}"
+                                config="gaugeConfigs[(key - 1) / 2]">
+                            </highchart>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div role="tabpanel" class="tab-pane" id="drives">
                 <div>
@@ -46,16 +75,23 @@
                 </div>
             </div>
         </div>
-        <div style="float:left; display: inline-block; width:39%">
+<!--        <div style="float:left; display: inline-block; width:39%">
             <div ng-repeat="(key, team) in teams" ng-if="!(key % 2 == 1)">
                 <div style="float:left;display: inline-block; width:50%;">
                     <table class="scoreboard">
                         <tbody>
+                        <tr>
+                            <td>{{gameData[(key) / 2].home_team}}</td>
+                            <td></td>
+                            <td>{{gameData[(key) / 2].away_team}}</td>
+                        </tr>
                         <tr style="font-size:2.5em; font-weight: bold">
-                            <td>{{gameData[(key) / 2].home_score}} - {{gameData[(key) / 2].away_score}}</td>
+                            <td>{{gameData[(key) / 2].home_score}}</td>
+                            <td>-</td>
+                            <td>{{gameData[(key) / 2].away_score}}</td>
                         </tr>
                         <tr style="font-size:1.5em">
-                            <td>{{getQuarterTime(gameData[(key) / 2].time)}}</td>
+                            <td colspan="3">{{getQuarterTime(gameData[(key) / 2].time)}}</td>
                         </tr>
                         </tbody>
                     </table>
@@ -67,7 +103,7 @@
                     </highchart>
                 </div>
             </div>
-        </div>
+        </div>-->
     </div>
     <div style="clear: both;"></div>
 
