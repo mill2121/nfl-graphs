@@ -5,6 +5,7 @@
         .controller('HomePageCtrl', function ($scope, $http) {
             document.title = 'NFL Graphs';
             $scope.currentTab = 'offense';
+            $scope.driveFilter = 'all';
 
             $scope.$watch('playerData', function (playerData) {
                 if (playerData) {
@@ -25,17 +26,6 @@
                 }
             });
 
-            $scope.$watch('currentTab', function (currentTab) {
-                if (currentTab == 'drives') {
-                    console.log(currentTab);
-                    $scope.loadingPlayData = true;
-                    $http.post("application/index/get-play-data").success(function (data) {
-                        $scope.loadingPlayData = false;
-                        $scope.playData = data.playData;
-                    });
-                }
-            });
-
             $scope.$watch('playData', function (playData) {
                 if (playData) {
                     var formattedPlayData = $scope.formatPlayData(playData);
@@ -45,6 +35,15 @@
                     });
                 }
             });
+
+            $scope.initialLoad = function () {
+                $scope.loadingPlayData = true;
+                $http.post("application/index/get-play-data").success(function (data) {
+                    $scope.loadingPlayData = false;
+                    $scope.playData = data.playData;
+                });
+            };
+            $scope.initialLoad();
 
             $scope.convertHex = function (hex,opacity){
                 hex = hex.replace('#','');
@@ -67,17 +66,19 @@
                         gsisId = play['gsis_id'];
                         formattedPlayData.push([
                             {
-                                name: firstTeam,
+                                name: firstTeam['name'],
+                                label: firstTeam['label'],
                                 data: firstTeamData,
-                                fillColor: $scope.convertHex(firstTeamColors['primary'],75),
-                                color: firstTeamColors['secondary'],
+                                //fillColor: $scope.convertHex(firstTeamColors['primary'],75),
+                                color: firstTeamColors['primary'],
                                 threshold: -30
                             },
                             {
-                                name: secondTeam,
+                                name: secondTeam['name'],
+                                label: secondTeam['label'],
                                 data: secondTeamData,
-                                fillColor: $scope.convertHex(secondTeamColors['primary'],75),
-                                color: secondTeamColors['secondary'],
+                                //fillColor: $scope.convertHex(secondTeamColors['primary'],75),
+                                color: secondTeamColors['primary'],
                                 threshold: -30
                             }
                         ]);
@@ -87,18 +88,24 @@
                         secondTeamData = [];
                     }
                     if (!firstTeam) {
-                        firstTeam = play['pos_team'];
+                        firstTeam = {
+                            name: play['pos_team'],
+                            label: play['pos_label']
+                        };
                         firstTeamColors = {
                             primary: play['primary_color'],
                             secondary: play['secondary_color']
                         };
                     }
-                    if (firstTeam == play['pos_team']) {
+                    if (firstTeam['name'] == play['pos_team']) {
                         firstTeamData.push($scope.getRelevantPlayData(play));
                         secondTeamData.push($scope.getNullPoint(play.time_seconds));
                     } else {
                         if (!secondTeam) {
-                            secondTeam = play['pos_team'];
+                            secondTeam = {
+                                name: play['pos_team'],
+                                label: play['pos_label']
+                            };
                             secondTeamColors = {
                                 primary: play['primary_color'],
                                 secondary: play['secondary_color']
@@ -113,6 +120,7 @@
 
             $scope.getNullPoint = function (time) {
                 return {
+                    time: null,
                     x: time,
                     y: null,
                     name: 'N/A'
@@ -121,11 +129,45 @@
 
             $scope.getRelevantPlayData = function (play)
             {
-                return {
+                var playData = {
+                    time: play.time,
                     x: play.time_seconds,
                     y: play.yardline,
                     name: play.description
+                    //marker: {symbol:'circle',radius:5}
                 };
+                if (play.scored) {
+                    playData.marker = {
+                        enabled: true,
+                        radius: 5,
+                        symbol:'circle'
+                    }
+                } else if (play.turnover) {
+                    playData.marker = {
+                        enabled: true,
+                        radius:6,
+                        symbol:'diamond'
+                    }
+                }
+                return playData;
+            };
+
+            /**
+             * Pass in the yard integer (-50 to 50) and receive the text label associated with it
+             * @param yardInt
+             * @returns {*}
+             */
+            $scope.formatYardLine = function (yardInt) {
+                if (yardInt === 50) {
+                    return 'End Zone';
+                } else if (yardInt === -50) {
+                    return 'Safety';
+                } else if (yardInt > 0) {
+                    return 'OPP ' + (50 - yardInt);
+                } else if (yardInt < 0) {
+                    return 'OWN ' + (50 - (yardInt * -1))
+                }
+                return 50;
             };
 
             /**
@@ -240,7 +282,7 @@
                                         result += '<div>' + stat + '</div>';
                                     });
                                 } else {
-                                    result += '<br/><div>' + this.point.stats + '</div>';
+                                    result += '<div>' + this.point.stats + '</div>';
                                 }
                                 return result;
                             },
@@ -411,28 +453,30 @@
                             text: null
                         },
                         subtitle: {
-                            text: 'Game Time (minutes)',
+                            text: null,
                             floating: true,
                             align: 'center',
                             verticalAlign: 'bottom',
                             y: 15
                         },
-                        legend: {
-                            layout: 'vertical',
-                            align: 'left',
-                            verticalAlign: 'top',
-                            x: 150,
-                            y: 100,
-                            floating: true,
-                            borderWidth: 1,
-                            backgroundColor: (Highcharts.theme && Highcharts.theme.legendBackgroundColor) || '#FFFFFF'
-                        },
                         xAxis: {
                             lineColor: '#666666',
                             tickColor: '#666666',
-                            //categories: ['Apples', 'Pears', 'Oranges', 'Bananas', 'Grapes', 'Plums', 'Strawberries', 'Raspberries'],
+                            tickPositions: [900, 1800, 2700, 3600],
                             labels: {
-                                enabled: false
+                                enabled: true,
+                                formatter: function () {
+                                    if (this.value == 900) {
+                                        return '1st Quarter';
+                                    } else if (this.value === 1800) {
+                                        return '2nd Quarter'
+                                    } else if (this.value === 2700) {
+                                        return '3rd Quarter'
+                                    } else if (this.value === 3600) {
+                                        return '4th Quarter'
+                                    }
+                                    return null;
+                                }
                             }
                         },
                         yAxis: {
@@ -445,14 +489,20 @@
                             endOnTick:false,
                             labels: {
                                 formatter: function () {
-                                    return this.value;
+                                    return $scope.formatYardLine(this.value);
                                 }
                             }
                         },
                         tooltip: {
                             formatter: function () {
-                                return '<b>' + this.series.name + '</b><br/>' +
-                                    this.x + ': ' + this.y;
+                                console.log(this);
+                                return '<b>' + this.series.name + ' @ ' + $scope.formatYardLine(this.y) + '</b><br/>' +
+                                    '<br/>' + this.point.name;
+                            }
+                        },
+                        legend: {
+                            labelFormatter: function () {
+                                return this.userOptions.label;
                             }
                         },
                         plotOptions: {
@@ -501,18 +551,25 @@
                 return time;
             };
 
-            $scope.getQuarterTime = function (time) {
-                var secondsLeft = parseInt(time.substring(time.indexOf(",") + 1, time.length - 1)),
-                    playClock = $scope.toHHMMSS(900 - secondsLeft);
-                if (time === '(Final,0)') {
-                    return 'Final';
-                } else if (time === '(Half,0)') {
-                    return 'Halftime';
-                } else if (time.substr(0, 3) === '(OT') {
-                    return 'Overtime ' + playClock;
+            $scope.getQuarterTime = function (time, abbr) {
+                if (time) {
+                    var secondsLeft = parseInt(time.substring(time.indexOf(",") + 1, time.length - 1)),
+                        playClock = $scope.toHHMMSS(900 - secondsLeft);
+                    if (time === '(Final,0)') {
+                        return 'Final';
+                    } else if (time === '(Half,0)') {
+                        return 'Halftime';
+                    } else if (time.substr(0, 3) === '(OT') {
+                        return 'Overtime ' + playClock;
+                    }
+                    var quarter = parseInt(time.substr(time.indexOf(",") - 1, 1)), suffix = $scope.getSuffix(quarter);
+
+                    if (abbr) {
+                        return 'Q' + quarter + ' ' + playClock;
+                    }
+                    return quarter + suffix + ' Quarter ' + playClock;
                 }
-                var quarter = parseInt(time.substr(time.indexOf(",") - 1, 1)), suffix = $scope.getSuffix(quarter);
-                return quarter + suffix + ' Quarter ' + playClock;
+                return '';
             };
         });
 }());

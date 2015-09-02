@@ -15,11 +15,20 @@
                 </li>
             </ul>
         </div>
-        <div style="float:left; display: inline-block; width:19%; text-align:center; font-size:1.25em; text-decoration: underline">
-            <span ng-show="currentTab == 'offense'">Scoreboard</span>
+        <div ng-show="currentTab == 'offense'">
+            <div style="float:left; display: inline-block; width:19%; text-align:center; font-size:1.25em; text-decoration: underline">
+                <span>Scoreboard</span>
+            </div>
+            <div style="float:left; display: inline-block; width:20%; text-align:center; font-size:1.25em; text-decoration: underline;">
+                <span>Current Drive</span>
+            </div>
         </div>
-        <div style="float:left; display: inline-block; width:20%; text-align:center; font-size:1.25em; text-decoration: underline;">
-            <span ng-show="currentTab == 'offense'">Current Drive</span>
+        <div ng-show="currentTab == 'drives'" style="float:right;display:inline-block;margin-right:30px">
+            <button class="btn filterButton" ng-class="{active: driveFilter == 'all'}">All</button>
+            <button class="btn filterButton" ng-class="{active: driveFilter == '1'}">1st Quarter</button>
+            <button class="btn filterButton" ng-class="{active: driveFilter == '2'}">2nd Quarter</button>
+            <button class="btn filterButton" ng-class="{active: driveFilter == '3'}">3rd Quarter</button>
+            <button class="btn filterButton" ng-class="{active: driveFilter == '4'}">4th Quarter</button>
         </div>
     </div>
     <div style="width:100%">

@@ -128,3 +128,47 @@
     opacity:1;
     z-index:9999 !important;
 }
+
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus{
+    color: #ffffff;
+    background-color: #002C5F;
+    font-weight:bold;
+    border-radius: 4px;
+    margin-left:5px;
+}
+
+.nav-tabs > li:not(active) > a {
+    color: #002C5F;
+    background-color: #ffffff;
+    border-radius: 4px;
+    margin-left:5px;
+}
+
+.nav-tabs > li:hover > a,
+.nav-tabs > li:hover > a:hover,
+.nav-tabs > li:hover > a:focus{
+    color: #ffffff;
+    background-color: #005A8B;
+    border-radius: 4px;
+}
+
+.filterButton {
+    color: #002C5F;
+    background-color: #ffffff;
+    border-radius: 4px;
+    margin-left:5px;
+    padding: 10px 15px;
+}
+
+.filterButton.active {
+    color: #ffffff;
+    background-color: #002C5F;
+    font-weight:bold;
+}
+
+.filterButton:hover {
+    color: #ffffff;
+    background-color: #005A8B;
+}
