@@ -2,6 +2,7 @@
 namespace Players\Model;
 
 use Zend\Db\TableGateway\TableGateway;
+use Zend\Debug\Debug;
 
 class PlayerTable
 {
@@ -15,11 +16,12 @@ class PlayerTable
 
     /**
      * Get the play by play information so that you can populate the time of possession area chart.
+     * @param $driveFilter - The quarter in which you wish to see the plays, defaults to 'all'.
      * @return array
      */
-    public function getPlayData()
+    public function getPlayData($driveFilter)
     {
-        $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute("
+        $query = "
 SELECT d.gsis_id, g.home_team, (g.home_team = d.pos_team) AS is_home_team, d.drive_id, p.time,
   nfl_graphs.get_seconds(p.time) AS time_seconds,
   nfl_graphs.get_yardline(
@@ -37,9 +39,18 @@ JOIN public.play p ON (p.gsis_id = d.gsis_id AND p.drive_id = d.drive_id)
 JOIN public.team t ON (t.team_id = d.pos_team)
 JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
 WHERE g.start_time < now()
-      --and p.yardline IS NULL
+      [[driveFilter]]
 ORDER BY d.gsis_id DESC, d.drive_id, p.play_id;
-        ");
+        ";
+
+        // Apply the drive filter by attaching the appropriate WHERE clauses
+        if ($driveFilter == 'all') {
+            $query = str_replace('[[driveFilter]]', '', $query);
+        } else {
+            $query = str_replace('[[driveFilter]]', " AND p.time::text LIKE '(" . $driveFilter . "%'", $query);
+        }
+
+        $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute($query);
         $resultSet->buffer();
         $results = array();
         foreach ($resultSet as $row) {
@@ -68,13 +79,7 @@ SELECT g.week, g.season_type, t.name, play.pos_team, g.home_team, g.away_team, t
 ) q
 JOIN public.play play ON (q.gsis_id = play.gsis_id AND q.play_id = play.play_id)
 JOIN public.game g ON (g.gsis_id = play.gsis_id)
-
--- *************************************
--- Uncomment when season starts!!!
--- *************************************
---JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
 JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
-
 JOIN public.team t ON t.team_id = play.pos_team
 JOIN nfl_graphs.team_colors tc ON (play.pos_team = tc.team_id)
 ORDER BY q.gsis_id DESC;

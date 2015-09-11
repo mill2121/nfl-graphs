@@ -24,11 +24,21 @@
             </div>
         </div>
         <div ng-show="currentTab == 'drives'" style="float:right;display:inline-block;margin-right:30px">
-            <button class="btn filterButton" ng-class="{active: driveFilter == 'all'}">All</button>
-            <button class="btn filterButton" ng-class="{active: driveFilter == '1'}">1st Quarter</button>
-            <button class="btn filterButton" ng-class="{active: driveFilter == '2'}">2nd Quarter</button>
-            <button class="btn filterButton" ng-class="{active: driveFilter == '3'}">3rd Quarter</button>
-            <button class="btn filterButton" ng-class="{active: driveFilter == '4'}">4th Quarter</button>
+            <button class="btn filterButton" ng-click="driveFilter = 'all'" ng-class="{active: driveFilter == 'all'}">
+                All
+            </button>
+            <button class="btn filterButton" ng-click="driveFilter = 'Q1'" ng-class="{active: driveFilter == 'Q1'}">
+                1st Quarter
+            </button>
+            <button class="btn filterButton" ng-click="driveFilter = 'Q2'" ng-class="{active: driveFilter == 'Q2'}">
+                2nd Quarter
+            </button>
+            <button class="btn filterButton" ng-click="driveFilter = 'Q3'" ng-class="{active: driveFilter == 'Q3'}">
+                3rd Quarter
+            </button>
+            <button class="btn filterButton" ng-click="driveFilter = 'Q4'" ng-class="{active: driveFilter == 'Q4'}">
+                4th Quarter
+            </button>
         </div>
     </div>
     <div style="width:100%">
@@ -72,6 +82,7 @@
             </div>
             <div role="tabpanel" class="tab-pane" id="drives">
                 <div>
+
                     <highchart ng-repeat="(key, fieldPossessionConfig) in fieldPossessionConfigs"
                                ng-if="currentTab == 'drives' && !loadingPlayData"
                         style="float:left;display: inline-block;width:100%;height:260px;padding:10px 25px 0 25px"
@@ -79,7 +90,8 @@
                         config="fieldPossessionConfigs[key]">
                     </highchart>
                     <div ng-if="currentTab == 'drives' && loadingPlayData"
-                         style="float:left;display: inline-block;width:100%;height:260px;padding:10px 25px 0 25px">
+                         style="float:left;display: inline-block;width:100%;height:260px;padding:10px 25px 0 25px;text-align:center">
+                        <i class="fa fa-spinner fa-spin fa-3x"></i>
                     </div>
                 </div>
             </div>

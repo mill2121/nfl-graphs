@@ -2,49 +2,114 @@
     "use strict";
     var app;
     app = angular.module('home-page', ['highcharts-ng', 'ui.bootstrap'])
-        .controller('HomePageCtrl', function ($scope, $http) {
+        .controller('HomePageCtrl', function ($scope, $http, $timeout) {
             document.title = 'NFL Graphs';
             $scope.currentTab = 'offense';
             $scope.driveFilter = 'all';
+            $scope.refreshTime = 30000;
 
             $scope.$watch('playerData', function (playerData) {
                 if (playerData) {
-                    $scope.teams = $scope.formatPlayerDataIntoTeamData(playerData);
-                    $scope.chartConfigs = [];
-                    angular.forEach($scope.teams, function (teamData) {
-                        $scope.chartConfigs.push($scope.formatChartConfig(teamData));
-                    });
+                    $scope.loadPlayerData(playerData);
                 }
             });
 
             $scope.$watch('gameData', function (gameData) {
                 if (gameData) {
-                    $scope.gaugeConfigs = [];
-                    angular.forEach(gameData, function (game) {
-                        $scope.gaugeConfigs.push($scope.formatGaugeConfig(game));
-                    });
+                    $scope.loadGameData(gameData);
                 }
             });
 
-            $scope.$watch('playData', function (playData) {
-                if (playData) {
-                    var formattedPlayData = $scope.formatPlayData(playData);
-                    $scope.fieldPossessionConfigs = [];
-                    angular.forEach(formattedPlayData, function (formattedPlayRow) {
-                        $scope.fieldPossessionConfigs.push($scope.formatFieldPossessionConfig(formattedPlayRow));
-                    });
+            $scope.$watch('driveFilter', function (driveFilter, oldVal) {
+                if (driveFilter && driveFilter !== oldVal) {
+                    $timeout.cancel($scope.timer);
+                    $scope.loadDrives(false);
                 }
             });
 
-            $scope.initialLoad = function () {
-                $scope.loadingPlayData = true;
-                $http.post("application/index/get-play-data").success(function (data) {
-                    $scope.loadingPlayData = false;
-                    $scope.playData = data.playData;
+            /**
+             * Get the play data put into the fieldPossessionConfig necessary for rendering the graphs
+             */
+            $scope.initializePlayData = function () {
+                var formattedPlayData = $scope.formatPlayData($scope.playData);
+                $scope.fieldPossessionConfigs = [];
+                angular.forEach(formattedPlayData, function (formattedPlayRow) {
+                    $scope.fieldPossessionConfigs.push($scope.formatFieldPossessionConfig(formattedPlayRow));
                 });
             };
-            $scope.initialLoad();
 
+            /**
+             * Refreshes the dashboard by fetching playData, playerData, and gameData
+             */
+            $scope.refreshDashboard = function () {
+                $scope.loadTeamOffense();
+                $scope.loadDrives(false);
+            };
+
+            /**
+             * Load the Team Offense by getting the playerData and gameData
+             */
+            $scope.loadTeamOffense = function () {
+                $http.post("application/index/get-player-data")
+                    .success(function (data) {
+                        $scope.loadPlayerData(data.playerData);
+                        $scope.loadGameData(data.gameData);
+                });
+            };
+
+            /**
+             * Format the playerData into the proper format for the highcharts configs
+             * @param playerData
+             */
+            $scope.loadPlayerData = function (playerData) {
+                $scope.teams = $scope.formatPlayerDataIntoTeamData(playerData);
+                $scope.chartConfigs = [];
+                angular.forEach($scope.teams, function (teamData) {
+                    $scope.chartConfigs.push($scope.formatChartConfig(teamData));
+                });
+            };
+
+            /**
+             * Format the gameData into the proper format for the highcharts configs
+             * @param gameData
+             */
+            $scope.loadGameData = function (gameData) {
+                $scope.gaugeConfigs = [];
+                angular.forEach(gameData, function (game) {
+                    $scope.gaugeConfigs.push($scope.formatGaugeConfig(game));
+                });
+            };
+
+            /**
+             * Load the playData for the drives graphs
+             * @param initialLoad
+             */
+            $scope.loadDrives = function (initialLoad) {
+
+                // Only the initial load should warrant a loading spinner
+                if (initialLoad) {
+                    $scope.loadingPlayData = true;
+                }
+
+                $http.post("application/index/get-play-data", {
+                    driveFilter: $scope.driveFilter
+                }).success(function (data) {
+                    $scope.loadingPlayData = false;
+                    $scope.playData = data.playData;
+                    $scope.initializePlayData();
+                    $scope.timer = $timeout(function () {
+                        $scope.refreshDashboard();
+                    }, $scope.refreshTime);
+                });
+            };
+            $scope.loadDrives(true);
+
+            /**
+             * Convert a hex color value to rgba
+             * @param hex
+             * @param opacity
+             * @returns {string}
+             */
             $scope.convertHex = function (hex,opacity){
                 hex = hex.replace('#','');
                 var r = parseInt(hex.substring(0,2), 16),
@@ -69,7 +134,6 @@
                                 name: firstTeam['name'],
                                 label: firstTeam['label'],
                                 data: firstTeamData,
-                                //fillColor: $scope.convertHex(firstTeamColors['primary'],75),
                                 color: firstTeamColors['primary'],
                                 threshold: -30
                             },
@@ -77,7 +141,6 @@
                                 name: secondTeam['name'],
                                 label: secondTeam['label'],
                                 data: secondTeamData,
-                                //fillColor: $scope.convertHex(secondTeamColors['primary'],75),
                                 color: secondTeamColors['primary'],
                                 threshold: -30
                             }
@@ -115,9 +178,33 @@
                         firstTeamData.push($scope.getNullPoint(play.time_seconds));
                     }
                 });
+
+                // Push the last game data into the formatted array
+                formattedPlayData.push([
+                    {
+                        name: firstTeam['name'],
+                        label: firstTeam['label'],
+                        data: firstTeamData,
+                        color: firstTeamColors['primary'],
+                        threshold: -30
+                    },
+                    {
+                        name: secondTeam['name'],
+                        label: secondTeam['label'],
+                        data: secondTeamData,
+                        color: secondTeamColors['primary'],
+                        threshold: -30
+                    }
+                ]);
+
                 return formattedPlayData;
             };
 
+            /**
+             * Point inserted to show the "empty" spaces for a team when they are not in possession of the football
+             * @param time
+             * @returns {{time: null, x: *, y: null, name: string}}
+             */
             $scope.getNullPoint = function (time) {
                 return {
                     time: null,
@@ -127,8 +214,12 @@
                 }
             };
 
-            $scope.getRelevantPlayData = function (play)
-            {
+            /**
+             * Get the playData in a format compatible for the highcharts object
+             * @param play
+             * @returns {{time: (*|Console.time|null|Dd.time|time), x: *, y: *, name: (description|*)}}
+             */
+            $scope.getRelevantPlayData = function (play) {
                 var playData = {
                     time: play.time,
                     x: play.time_seconds,
@@ -256,6 +347,11 @@
                 return graphPoints;
             };
 
+            /**
+             * Format the pie chart object for players offense for highcharts
+             * @param teamData
+             * @returns {{options: {chart: {type: string, backgroundColor: string, height: number, style: {color: string, overflow: string}}, tooltip: {useHTML: boolean, backgroundColor: string, zIndex: number, formatter: Function, style: {z-index: number}}, plotOptions: {pie: {borderColor: *, dataLabels: {enabled: boolean, style: {width: string, word-break: string}, formatter: Function}, shadow: {color: string, offsetX: number, offsetY: number, width: number}, innerSize: string}}}, title: {useHTML: boolean, text: string, style: {color: string, text-align: string}}, series: {name: string, size: string, colorByPoint: boolean, style: {color: string}, data: *}[]}}
+             */
             $scope.formatChartConfig = function (teamData) {
                 var chartConfig = {
                     options: {
@@ -345,6 +441,11 @@
                 return chartConfig;
             };
 
+            /**
+             * Format the gauge object for highcharts
+             * @param gameData
+             * @returns {{options: {chart: {type: string, backgroundColor: string, height: number, style: {color: string, overflow: string}, spacingTop: number, spacingLeft: number, spacingRight: number, spacingBottom: number}, plotOptions: {dial: {baseLength: string, baseWidth: number, radius: string, rearLength: string, topWidth: number}}, tooltip: {enabled: boolean}, pane: {startAngle: number, endAngle: number, background: {innerRadius: string, outerRadius: string, shape: string}}, title: {useHTML: boolean, text: string, style: {color: string, margin: string}}, xAxis: {labels: {formatter: Function}}, yAxis: {labels: {distance: number, formatter: Function}, tickPositions: number[], min: number, max: number, plotBands: {from: number, to: number, color: string, thickness: string}[]}}, series: {name: string, size: string, data: *[], dataLabels: {formatter: Function}}[]}}
+             */
             $scope.formatGaugeConfig = function (gameData) {
                 var gaugeConfig = {
                     options: {
@@ -395,7 +496,7 @@
                         xAxis: {
                             labels: {
                                 formatter: function () {
-                                    console.log(this);
+                                    //console.log(this);
                                 }
                             }
                         },
@@ -431,8 +532,11 @@
                                      data: [$scope.formatFieldPosition(gameData.yardline)],
                                      dataLabels: {
                                          formatter: function () {
-                                             var down = parseInt(gameData.down), suffix = $scope.getSuffix(down);
-                                             return down + suffix + ' & ' + gameData.yards_to_go;
+                                             if (down) {
+                                                 var down = parseInt(gameData.down), suffix = $scope.getSuffix(down);
+                                                 return down + suffix + ' & ' + gameData.yards_to_go;
+                                             }
+                                             return null;
                                          }
                                      }
                                  }]
@@ -440,6 +544,11 @@
                 return gaugeConfig;
             };
 
+            /**
+             * Format the drives area charts object for highcarts
+             * @param playData
+             * @returns {{options: {chart: {type: string, backgroundColor: string, spacingBottom: number}, title: {text: null}, subtitle: {text: null, floating: boolean, align: string, verticalAlign: string, y: number}, xAxis: {lineColor: string, tickColor: string, tickPositions: number[], labels: {enabled: boolean, formatter: Function}}, yAxis: {gridLineColor: string, title: {text: string}, min: number, max: number, endOnTick: boolean, labels: {formatter: Function}}, tooltip: {formatter: Function}, legend: {labelFormatter: Function}, plotOptions: {area: {fillOpacity: number}}, credits: {enabled: boolean}}, series: *}}
+             */
             $scope.formatFieldPossessionConfig = function(playData) {
                 playData.threshold = 50;
                 var fieldPossessionConfig = {
@@ -467,13 +576,13 @@
                                 enabled: true,
                                 formatter: function () {
                                     if (this.value == 900) {
-                                        return '1st Quarter';
+                                        return 'End of 1st Quarter';
                                     } else if (this.value === 1800) {
-                                        return '2nd Quarter'
+                                        return 'End of 2nd Quarter'
                                     } else if (this.value === 2700) {
-                                        return '3rd Quarter'
+                                        return 'End of 3rd Quarter'
                                     } else if (this.value === 3600) {
-                                        return '4th Quarter'
+                                        return 'End of Game'
                                     }
                                     return null;
                                 }
@@ -495,7 +604,6 @@
                         },
                         tooltip: {
                             formatter: function () {
-                                console.log(this);
                                 return '<b>' + this.series.name + ' @ ' + $scope.formatYardLine(this.y) + '</b><br/>' +
                                     '<br/>' + this.point.name;
                             }
@@ -519,6 +627,11 @@
                 return fieldPossessionConfig;
             };
 
+            /**
+             * Get rid of parenthesis received from the database for yard lines
+             * @param yardLine
+             * @returns {XML|*|string|void}
+             */
             $scope.formatFieldPosition = function (yardLine) {
                 var formattedYardLine = yardLine.replace("(", "");
                 formattedYardLine = formattedYardLine.replace(")", "");
@@ -526,6 +639,11 @@
                 return formattedYardLine;
             };
 
+            /**
+             * Get the suffix for the current down
+             * @param down
+             * @returns {string}
+             */
             $scope.getSuffix = function (down) {
                 var suffix = 'th';
                 if (down == 1) {
@@ -538,6 +656,10 @@
                 return suffix;
             };
 
+            /**
+             * @param seconds
+             * @returns {string}
+             */
             $scope.toHHMMSS = function (seconds) {
                 var sec_num = parseInt(seconds, 10); // don't forget the second param
                 var hours   = Math.floor(sec_num / 3600);
@@ -551,6 +673,12 @@
                 return time;
             };
 
+            /**
+             * Get the time to display in a human readable format
+             * @param time
+             * @param abbr
+             * @returns {string}
+             */
             $scope.getQuarterTime = function (time, abbr) {
                 if (time) {
                     var secondsLeft = parseInt(time.substring(time.indexOf(",") + 1, time.length - 1)),

@@ -21,9 +21,29 @@ class IndexController extends AbstractActionController
         ));
     }
 
+    /**
+     * For the initial load, the data is gotten through the indexAction, but this is the action for refreshing data
+     * @return JsonModel
+     */
+    public function getPlayerDataAction()
+    {
+        $playerData = $this->getPlayerTable()->getPlayerData();
+        $gameData = $this->getPlayerTable()->getGameData();
+        return new JsonModel(array(
+            'playerData' => $playerData,
+            'gameData' => $gameData
+        ));
+    }
+
+    /**
+     * Get the play by play data for the drives graph, based on the driveFilter given
+     * @return JsonModel
+     */
     public function getPlayDataAction()
     {
-        $playData = $this->getPlayerTable()->getPlayData();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $driveFilter = $data['driveFilter'];
+        $playData = $this->getPlayerTable()->getPlayData($driveFilter);
         return new JsonModel(array(
             'playData' => $playData
         ));
