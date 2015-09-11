@@ -22,16 +22,17 @@ class PlayerTable
     public function getPlayData($driveFilter)
     {
         $query = "
-SELECT d.gsis_id, g.home_team, (g.home_team = d.pos_team) AS is_home_team, d.drive_id, p.time,
+SELECT d.gsis_id, g.home_team, (g.home_team = d.pos_team) AS is_home_team, d.drive_id, p.time, d.end_time,
   nfl_graphs.get_seconds(p.time) AS time_seconds,
   nfl_graphs.get_yardline(
      CASE WHEN (p.note IS NULL OR p.note <> 'XP') THEN p.yardline ELSE '(50)'::field_pos END
   ) as yardline,
   CASE WHEN (p.note = 'TD' OR p.note = 'FG' OR p.note = '2PS' OR p.note = '2PRF') THEN TRUE ELSE FALSE END AS scored,
-  CASE WHEN (p.note = 'INT' OR p.note = 'FUMBLE' OR p.note = 'FGB' OR p.note = 'FGM' OR p.note = 'SAF')
+  CASE WHEN (p.note = 'INT' OR (p.note = 'FUMBLE' AND d.result = 'Fumble') OR p.note = 'FGB' OR p.note = 'FGM' OR p.note = 'SAF')
     THEN TRUE ELSE FALSE END AS turnover,
   p.note,
-  d.end_time, d.pos_team, t.city || ' ' || t.name AS pos_label, tc.primary_color, tc.secondary_color, d.result, p.play_id, p.description, p.time
+  d.pos_team, t.city || ' ' || t.name AS pos_label, CASE WHEN (g.home_team = d.pos_team) THEN g.home_score ELSE g.away_score END AS pos_score,
+  tc.primary_color, tc.secondary_color, d.result, p.play_id, p.description, p.time
 FROM public.game g
 JOIN public.drive d ON (d.gsis_id = g.gsis_id)
 JOIN nfl_graphs.team_colors tc ON (d.pos_team = tc.team_id)

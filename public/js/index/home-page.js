@@ -3,10 +3,10 @@
     var app;
     app = angular.module('home-page', ['highcharts-ng', 'ui.bootstrap'])
         .controller('HomePageCtrl', function ($scope, $http, $timeout) {
-            document.title = 'NFL Graphs';
             $scope.currentTab = 'offense';
             $scope.driveFilter = 'all';
             $scope.refreshTime = 30000;
+            $scope.pageLoad = true;
 
             $scope.$watch('playerData', function (playerData) {
                 if (playerData) {
@@ -16,14 +16,29 @@
 
             $scope.$watch('gameData', function (gameData) {
                 if (gameData) {
+                    document.title = 'NFL Dashboard - Week ' + gameData[0].week;
                     $scope.loadGameData(gameData);
                 }
             });
 
             $scope.$watch('driveFilter', function (driveFilter, oldVal) {
                 if (driveFilter && driveFilter !== oldVal) {
-                    $timeout.cancel($scope.timer);
+                    $timeout.cancel($scope.drivesTimer);
                     $scope.loadDrives(false);
+                }
+            });
+
+            $scope.$watch('currentTab', function (currentTab) {
+                if (!$scope.pageLoad) {
+                    if (currentTab == 'offense') {
+                        $timeout.cancel($scope.drivesTimer);
+                        $scope.loadTeamOffense(true);
+                    } else if (currentTab == 'drives') {
+                        $timeout.cancel($scope.offenseTimer);
+                        $scope.loadDrives(true);
+                    }
+                } else {
+                    $scope.pageLoad = false;
                 }
             });
 
@@ -39,21 +54,21 @@
             };
 
             /**
-             * Refreshes the dashboard by fetching playData, playerData, and gameData
-             */
-            $scope.refreshDashboard = function () {
-                $scope.loadTeamOffense();
-                $scope.loadDrives(false);
-            };
-
-            /**
              * Load the Team Offense by getting the playerData and gameData
              */
-            $scope.loadTeamOffense = function () {
+            $scope.loadTeamOffense = function (initialLoad) {
+                // Only the initial load should warrant a loading spinner
+                if (initialLoad) {
+                    $scope.loadingOffenseData = true;
+                }
                 $http.post("application/index/get-player-data")
                     .success(function (data) {
+                        $scope.loadingOffenseData = false;
                         $scope.loadPlayerData(data.playerData);
                         $scope.loadGameData(data.gameData);
+                        $scope.offenseTimer = $timeout(function () {
+                            $scope.loadTeamOffense(false);
+                        }, $scope.refreshTime);
                 });
             };
 
@@ -85,24 +100,21 @@
              * @param initialLoad
              */
             $scope.loadDrives = function (initialLoad) {
-
                 // Only the initial load should warrant a loading spinner
                 if (initialLoad) {
                     $scope.loadingPlayData = true;
                 }
-
                 $http.post("application/index/get-play-data", {
                     driveFilter: $scope.driveFilter
                 }).success(function (data) {
                     $scope.loadingPlayData = false;
                     $scope.playData = data.playData;
                     $scope.initializePlayData();
-                    $scope.timer = $timeout(function () {
-                        $scope.refreshDashboard();
+                    $scope.drivesTimer = $timeout(function () {
+                        $scope.loadDrives(false);
                     }, $scope.refreshTime);
                 });
             };
-            $scope.loadDrives(true);
 
             /**
              * Convert a hex color value to rgba
@@ -129,22 +141,12 @@
                 angular.forEach(playData, function (play, key) {
                     if (gsisId != play['gsis_id']) {
                         gsisId = play['gsis_id'];
-                        formattedPlayData.push([
-                            {
-                                name: firstTeam['name'],
-                                label: firstTeam['label'],
-                                data: firstTeamData,
-                                color: firstTeamColors['primary'],
-                                threshold: -30
-                            },
-                            {
-                                name: secondTeam['name'],
-                                label: secondTeam['label'],
-                                data: secondTeamData,
-                                color: secondTeamColors['primary'],
-                                threshold: -30
-                            }
-                        ]);
+                        formattedPlayData.push(
+                            [
+                                $scope.getPlayDataToPush(firstTeam, firstTeamData, firstTeamColors),
+                                $scope.getPlayDataToPush(secondTeam, secondTeamData, secondTeamColors)
+                            ]
+                        );
                         firstTeam = null;
                         secondTeam = null;
                         firstTeamData = [];
@@ -153,7 +155,8 @@
                     if (!firstTeam) {
                         firstTeam = {
                             name: play['pos_team'],
-                            label: play['pos_label']
+                            label: play['pos_label'],
+                            score: play['pos_score']
                         };
                         firstTeamColors = {
                             primary: play['primary_color'],
@@ -167,7 +170,8 @@
                         if (!secondTeam) {
                             secondTeam = {
                                 name: play['pos_team'],
-                                label: play['pos_label']
+                                label: play['pos_label'],
+                                score: play['pos_score']
                             };
                             secondTeamColors = {
                                 primary: play['primary_color'],
@@ -180,30 +184,38 @@
                 });
 
                 // Push the last game data into the formatted array
-                formattedPlayData.push([
-                    {
-                        name: firstTeam['name'],
-                        label: firstTeam['label'],
-                        data: firstTeamData,
-                        color: firstTeamColors['primary'],
-                        threshold: -30
-                    },
-                    {
-                        name: secondTeam['name'],
-                        label: secondTeam['label'],
-                        data: secondTeamData,
-                        color: secondTeamColors['primary'],
-                        threshold: -30
-                    }
-                ]);
+                formattedPlayData.push(
+                    [
+                        $scope.getPlayDataToPush(firstTeam, firstTeamData, firstTeamColors),
+                        $scope.getPlayDataToPush(secondTeam, secondTeamData, secondTeamColors)
+                    ]
+                );
 
                 return formattedPlayData;
             };
 
             /**
+             * Retrieve the data to push into the formattedPlayData config object
+             * @param team
+             * @param teamData
+             * @param teamColors
+             * @returns {object}
+             */
+            $scope.getPlayDataToPush = function (team, teamData, teamColors) {
+                return {
+                    name: team['name'],
+                    label: team['label'],
+                    score: team['score'],
+                    data: teamData,
+                    color: teamColors['primary'],
+                    threshold: -30
+                };
+            };
+
+            /**
              * Point inserted to show the "empty" spaces for a team when they are not in possession of the football
              * @param time
-             * @returns {{time: null, x: *, y: null, name: string}}
+             * @returns {object}
              */
             $scope.getNullPoint = function (time) {
                 return {
@@ -217,7 +229,7 @@
             /**
              * Get the playData in a format compatible for the highcharts object
              * @param play
-             * @returns {{time: (*|Console.time|null|Dd.time|time), x: *, y: *, name: (description|*)}}
+             * @returns {object}
              */
             $scope.getRelevantPlayData = function (play) {
                 var playData = {
@@ -350,7 +362,7 @@
             /**
              * Format the pie chart object for players offense for highcharts
              * @param teamData
-             * @returns {{options: {chart: {type: string, backgroundColor: string, height: number, style: {color: string, overflow: string}}, tooltip: {useHTML: boolean, backgroundColor: string, zIndex: number, formatter: Function, style: {z-index: number}}, plotOptions: {pie: {borderColor: *, dataLabels: {enabled: boolean, style: {width: string, word-break: string}, formatter: Function}, shadow: {color: string, offsetX: number, offsetY: number, width: number}, innerSize: string}}}, title: {useHTML: boolean, text: string, style: {color: string, text-align: string}}, series: {name: string, size: string, colorByPoint: boolean, style: {color: string}, data: *}[]}}
+             * @returns {object}
              */
             $scope.formatChartConfig = function (teamData) {
                 var chartConfig = {
@@ -366,12 +378,15 @@
                             }
                         },
                         tooltip: {
+                            borderWidth: 0,
+                            borderRadius: 0,
+                            shadow: false,
                             useHTML: true,
-                            backgroundColor: 'rgba(255, 255, 255, 1)',
+                            backgroundColor: 'rgba(255, 255, 255, 0)',
                             zIndex: 999999,
                             formatter: function() {
-                                var result = '<span style="font-weight:bold">' + this.point.name + ' (' +
-                                    this.point.y.toFixed(1) + '%)</span>:<br/>';
+                                var result = '<div class="playerToolTip"><span style="font-weight:bold">' +
+                                    this.point.name + ' (' + this.point.y.toFixed(1) + '%)</span>:<br/>';
                                 this.point.color = 'white';
                                 if (this.point.stats instanceof Array) {
                                     angular.forEach(this.point.stats, function (stat) {
@@ -380,6 +395,7 @@
                                 } else {
                                     result += '<div>' + this.point.stats + '</div>';
                                 }
+                                result += '</div>';
                                 return result;
                             },
                             style: {
@@ -444,87 +460,89 @@
             /**
              * Format the gauge object for highcharts
              * @param gameData
-             * @returns {{options: {chart: {type: string, backgroundColor: string, height: number, style: {color: string, overflow: string}, spacingTop: number, spacingLeft: number, spacingRight: number, spacingBottom: number}, plotOptions: {dial: {baseLength: string, baseWidth: number, radius: string, rearLength: string, topWidth: number}}, tooltip: {enabled: boolean}, pane: {startAngle: number, endAngle: number, background: {innerRadius: string, outerRadius: string, shape: string}}, title: {useHTML: boolean, text: string, style: {color: string, margin: string}}, xAxis: {labels: {formatter: Function}}, yAxis: {labels: {distance: number, formatter: Function}, tickPositions: number[], min: number, max: number, plotBands: {from: number, to: number, color: string, thickness: string}[]}}, series: {name: string, size: string, data: *[], dataLabels: {formatter: Function}}[]}}
+             * @returns {object}
              */
             $scope.formatGaugeConfig = function (gameData) {
-                var gaugeConfig = {
-                    options: {
-                        chart: {
-                            type: 'gauge',
-                            backgroundColor:'transparent',
-                            height:240,
-                            style: {
-                                color: 'black',
-                                'overflow': 'visible'
+                var gaugeConfig = null;
+                if (!gameData['finished']) {
+                    gaugeConfig = {
+                        options: {
+                            chart: {
+                                type: 'gauge',
+                                backgroundColor:'transparent',
+                                height:240,
+                                style: {
+                                    color: 'black',
+                                    'overflow': 'visible'
 
+                                },
+                                spacingTop: 0,
+                                spacingLeft: 0,
+                                spacingRight: 0,
+                                spacingBottom: 0
                             },
-                            spacingTop: 0,
-                            spacingLeft: 0,
-                            spacingRight: 0,
-                            spacingBottom: 0
-                        },
-                        plotOptions: {
-                            dial: {
-                                baseLength: '0%',
-                                baseWidth: 10,
-                                radius: '100%',
-                                rearLength: '0%',
-                                topWidth: 1
-                            }
-                        },
-                        tooltip: {
-                            enabled: false
-                        },
-                        pane: {
-                            startAngle: -90,
-                            endAngle: 90,
-                            background: {
-                                innerRadius: '40%',
-                                outerRadius: '100%',
-                                shape: 'arc'
-                            }
-                        },
-                        title: {
-                            useHTML: true,
-                            text: "<img height='60px' src='" + gameData.logo_url + "'/>",
-                            style: {
-                                color: 'black',
-                                margin: 'auto'
-                                //'text-align': 'center'
-                            }
-                        },
-                        xAxis: {
-                            labels: {
-                                formatter: function () {
-                                    //console.log(this);
+                            plotOptions: {
+                                dial: {
+                                    baseLength: '0%',
+                                    baseWidth: 10,
+                                    radius: '100%',
+                                    rearLength: '0%',
+                                    topWidth: 1
                                 }
-                            }
-                        },
-                        yAxis: {
-                            labels: {
-                                distance: -20,
-                                formatter: function () {
-                                    if (this.value == 40) {
-                                        return 'Red<br/>Zone';
+                            },
+                            tooltip: {
+                                enabled: false
+                            },
+                            pane: {
+                                startAngle: -90,
+                                endAngle: 90,
+                                background: {
+                                    innerRadius: '40%',
+                                    outerRadius: '100%',
+                                    shape: 'arc'
+                                }
+                            },
+                            title: {
+                                useHTML: true,
+                                text: "<img height='60px' src='" + gameData.logo_url + "'/>",
+                                style: {
+                                    color: 'black',
+                                    margin: 'auto'
+                                    //'text-align': 'center'
+                                }
+                            },
+                            xAxis: {
+                                labels: {
+                                    formatter: function () {
+                                        //console.log(this);
                                     }
-                                    return 50 - Math.abs(this.value);
                                 }
                             },
-                            tickPositions: [-30, 0, 40],
-                            min: -50,
-                            max: 50,
-                            plotBands: [/*{
-                                            from: -50,
-                                            to: 30,
-                                            color: '#FFFFFF', // green
-                                            thickness: '100%'
-                                        }, */{
-                                            from: 30,
-                                            to: 50,
-                                            color: '#DF5353', // red
-                                            thickness: '60%'
-                                        }]
-                        }
+                            yAxis: {
+                                labels: {
+                                    distance: -20,
+                                    formatter: function () {
+                                        if (this.value == 40) {
+                                            return 'Red<br/>Zone';
+                                        }
+                                        return 50 - Math.abs(this.value);
+                                    }
+                                },
+                                tickPositions: [-30, 0, 40],
+                                min: -50,
+                                max: 50,
+                                plotBands: [/*{
+                                 from: -50,
+                                 to: 30,
+                                 color: '#FFFFFF', // green
+                                 thickness: '100%'
+                                 }, */{
+                                          from: 30,
+                                          to: 50,
+                                          color: '#DF5353', // red
+                                          thickness: '60%'
+                                      }]
+                            }
                         },
                         series: [{
                                      name: "Field Position",
@@ -540,14 +558,15 @@
                                          }
                                      }
                                  }]
-                };
+                    };
+                }
                 return gaugeConfig;
             };
 
             /**
              * Format the drives area charts object for highcarts
              * @param playData
-             * @returns {{options: {chart: {type: string, backgroundColor: string, spacingBottom: number}, title: {text: null}, subtitle: {text: null, floating: boolean, align: string, verticalAlign: string, y: number}, xAxis: {lineColor: string, tickColor: string, tickPositions: number[], labels: {enabled: boolean, formatter: Function}}, yAxis: {gridLineColor: string, title: {text: string}, min: number, max: number, endOnTick: boolean, labels: {formatter: Function}}, tooltip: {formatter: Function}, legend: {labelFormatter: Function}, plotOptions: {area: {fillOpacity: number}}, credits: {enabled: boolean}}, series: *}}
+             * @returns {object}
              */
             $scope.formatFieldPossessionConfig = function(playData) {
                 playData.threshold = 50;
@@ -630,7 +649,7 @@
             /**
              * Get rid of parenthesis received from the database for yard lines
              * @param yardLine
-             * @returns {XML|*|string|void}
+             * @returns {string}
              */
             $scope.formatFieldPosition = function (yardLine) {
                 var formattedYardLine = yardLine.replace("(", "");

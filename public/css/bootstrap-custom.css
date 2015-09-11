@@ -120,6 +120,14 @@
     margin: 0 auto;
 }
 
+.final-score {
+    color: #000000;
+    font-family: Tahoma,Verdana,Segoe,sans-serif;
+    text-align: center;
+    font-size:2.5em;
+    font-weight: bold
+}
+
 /*.highcharts-container {
     position: inherit !important;
 }*/
@@ -171,4 +179,10 @@
 .filterButton:hover {
     color: #ffffff;
     background-color: #005A8B;
+}
+
+.playerToolTip {
+    background-color:white;
+    z-index:9999 !important;
+    padding:5px;
 }
