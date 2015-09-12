@@ -8,16 +8,20 @@
             $scope.refreshTime = 30000;
             $scope.pageLoad = true;
 
-            $scope.$watch('playerData', function (playerData) {
+            var playerDataWatch = $scope.$watch('playerData', function (playerData) {
                 if (playerData) {
+                    $scope.playerDataCheck = angular.copy(playerData);
                     $scope.loadPlayerData(playerData);
+                    playerDataWatch();
                 }
             });
 
-            $scope.$watch('gameData', function (gameData) {
+            var gameDataWatch = $scope.$watch('gameData', function (gameData) {
                 if (gameData) {
                     document.title = 'NFL Dashboard - Week ' + gameData[0].week;
+                    $scope.gameDataCheck = angular.copy(gameData);
                     $scope.loadGameData(gameData);
+                    gameDataWatch();
                 }
             });
 
@@ -39,6 +43,9 @@
                     }
                 } else {
                     $scope.pageLoad = false;
+                    $scope.offenseTimer = $timeout(function () {
+                        $scope.loadTeamOffense(false);
+                    }, $scope.refreshTime);
                 }
             });
 
@@ -64,8 +71,18 @@
                 $http.post("application/index/get-player-data")
                     .success(function (data) {
                         $scope.loadingOffenseData = false;
-                        $scope.loadPlayerData(data.playerData);
-                        $scope.loadGameData(data.gameData);
+                        if (
+                            !angular.equals($scope.playerDataCheck, data.playerData)
+                            || !angular.equals($scope.gameDataCheck, data.gameData)
+                        ) {
+                            console.log(angular.equals($scope.playerData, data.playerData));
+
+                            $scope.playerDataCheck = angular.copy(data.playerData);
+                            $scope.gameDataCheck = angular.copy(data.gameData);
+
+                            $scope.loadPlayerData(data.playerData);
+                            $scope.loadGameData(data.gameData);
+                        }
                         $scope.offenseTimer = $timeout(function () {
                             $scope.loadTeamOffense(false);
                         }, $scope.refreshTime);
@@ -108,8 +125,10 @@
                     driveFilter: $scope.driveFilter
                 }).success(function (data) {
                     $scope.loadingPlayData = false;
-                    $scope.playData = data.playData;
-                    $scope.initializePlayData();
+                    if (!$scope.playData || !angular.equals($scope.playData, data.playData)) {
+                        $scope.playData = data.playData;
+                        $scope.initializePlayData();
+                    }
                     $scope.drivesTimer = $timeout(function () {
                         $scope.loadDrives(false);
                     }, $scope.refreshTime);
@@ -438,7 +457,7 @@
                             " yds - Receiving: " + teamData.receivingYds + " yds</div>",
                         style: {
                             color: 'black',
-                            'text-align': 'center',
+                            'text-align': 'center'
                             //'text-shadow': '2px 1px 0px rgba(0,0,0, .4)',
                             //'text-shadow': '-1px -1px 1px #000,1px -1px 1px #000,-1px 1px 0 #000,1px 1px 1px #000'
                         }
