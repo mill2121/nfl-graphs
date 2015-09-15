@@ -4,3 +4,6 @@
 [submodule "vendor/zf2"]
 	path = vendor/zf2
 	url = https://github.com/zendframework/zf2.git
+[submodule "vendor/nfldb"]
+	path = vendor/nfldb
+	url = https://github.com/BurntSushi/nfldb.git
