@@ -78,7 +78,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div style="width:50%; float:left; display:inline-block; margin-top:20px; min-height:220px">
+                        <div style="width:50%; float:left; display:inline-block; margin-top:20px; min-height:240px">
                             <highchart
                                 ng-if="gaugeConfigs[(key - 1) / 2] !== null"
                                 id="gauge{{key}}"
@@ -88,6 +88,7 @@
                                 <!-- TODO: Need to put something here if the game is finished -->
                             </div>
                         </div>
+                        <div class="clearfix"></div>
                     </div>
                 </div>
                 <div ng-if="currentTab == 'offense' && loadingOffenseData"
@@ -112,5 +113,5 @@
             </div>
         </div>
     </div>
-    <div style="clear: both;"></div>
+    <div class="clearfix"></div>
 </div>
