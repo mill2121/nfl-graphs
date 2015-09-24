@@ -13,11 +13,9 @@ class IndexController extends AbstractActionController
 
     public function indexAction()
     {
-        $playerData = $this->getPlayerTable()->getPlayerData();
-        $gameData = $this->getPlayerTable()->getGameData();
+        $currentWeek = $this->getPlayerTable()->getCurrentWeek();
         return new ViewModel(array(
-            'playerData' => $playerData,
-            'gameData' => $gameData
+            'currentWeek' => $currentWeek
         ));
     }
 
@@ -27,8 +25,10 @@ class IndexController extends AbstractActionController
      */
     public function getPlayerDataAction()
     {
-        $playerData = $this->getPlayerTable()->getPlayerData();
-        $gameData = $this->getPlayerTable()->getGameData();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $selectedWeek = $data['selectedWeek'];
+        $playerData = $this->getPlayerTable()->getPlayerData($selectedWeek);
+        $gameData = $this->getPlayerTable()->getGameData($selectedWeek);
         return new JsonModel(array(
             'playerData' => $playerData,
             'gameData' => $gameData
@@ -43,7 +43,8 @@ class IndexController extends AbstractActionController
     {
         $data = json_decode(file_get_contents('php://input'), true);
         $driveFilter = $data['driveFilter'];
-        $playData = $this->getPlayerTable()->getPlayData($driveFilter);
+        $selectedWeek = $data['selectedWeek'];
+        $playData = $this->getPlayerTable()->getPlayData($driveFilter, $selectedWeek);
         return new JsonModel(array(
             'playData' => $playData
         ));

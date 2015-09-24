@@ -15,11 +15,26 @@ class PlayerTable
     }
 
     /**
+     * Filter out the week given a selected value
+     * @param $query
+     * @param $selectedWeek
+     * @return string
+     */
+    private function _filterWeek($query, $selectedWeek) {
+        if ($selectedWeek) {
+            return str_replace('[[weekSelected]]', $selectedWeek, $query);
+        } else {
+            return str_replace('[[weekSelected]]', 'm.week', $query);
+        }
+    }
+
+    /**
      * Get the play by play information so that you can populate the time of possession area chart.
      * @param $driveFilter - The quarter in which you wish to see the plays, defaults to 'all'.
+     * @param $selectedWeek - The week in which you wish to see the plays, defaults to null (which grabs the currentWeek).
      * @return array
      */
-    public function getPlayData($driveFilter)
+    public function getPlayData($driveFilter, $selectedWeek = null)
     {
         $query = "
 SELECT d.gsis_id, g.home_team, (g.home_team = d.pos_team) AS is_home_team, d.drive_id, p.time, d.end_time,
@@ -38,7 +53,7 @@ JOIN public.drive d ON (d.gsis_id = g.gsis_id)
 JOIN nfl_graphs.team_colors tc ON (d.pos_team = tc.team_id)
 JOIN public.play p ON (p.gsis_id = d.gsis_id AND p.drive_id = d.drive_id)
 JOIN public.team t ON (t.team_id = d.pos_team)
-JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
+JOIN public.meta m ON (g.week = [[weekSelected]] AND g.season_year = m.season_year AND g.season_type = m.season_type)
 WHERE g.start_time < now()
       [[driveFilter]]
 ORDER BY d.gsis_id DESC, d.drive_id, p.play_id;
@@ -50,6 +65,7 @@ ORDER BY d.gsis_id DESC, d.drive_id, p.play_id;
         } else {
             $query = str_replace('[[driveFilter]]', " AND p.time::text LIKE '(" . $driveFilter . "%'", $query);
         }
+        $query = self::_filterWeek($query, $selectedWeek);
 
         $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute($query);
         $resultSet->buffer();
@@ -62,11 +78,12 @@ ORDER BY d.gsis_id DESC, d.drive_id, p.play_id;
 
     /**
      * Get the current live game data, like score/time/downs/current drive/etc
+     * @param $selectedWeek - The week in which you wish to see the plays, defaults to null (which grabs the currentWeek).
      * @return array
      */
-    public function getGameData()
+    public function getGameData($selectedWeek = null)
     {
-        $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute("
+        $query = "
 SELECT g.week, g.season_type, t.name, play.pos_team, g.home_team, g.away_team, tc.logo_url, play.time, g.home_score, g.away_score, g.finished, play.yardline, play.down, play.yards_to_go,
   q.* FROM (
   SELECT play.gsis_id, MAX(play.play_id) AS play_id FROM public.game g
@@ -80,11 +97,13 @@ SELECT g.week, g.season_type, t.name, play.pos_team, g.home_team, g.away_team, t
 ) q
 JOIN public.play play ON (q.gsis_id = play.gsis_id AND q.play_id = play.play_id)
 JOIN public.game g ON (g.gsis_id = play.gsis_id)
-JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
+JOIN public.meta m ON (g.week = [[weekSelected]] AND g.season_year = m.season_year AND g.season_type = m.season_type)
 JOIN public.team t ON t.team_id = play.pos_team
 JOIN nfl_graphs.team_colors tc ON (play.pos_team = tc.team_id)
 ORDER BY q.gsis_id DESC;
-        ");
+        ";
+        $query = self::_filterWeek($query, $selectedWeek);
+        $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute($query);
         $resultSet->buffer();
         $results = array();
         foreach ($resultSet as $row) {
@@ -95,11 +114,12 @@ ORDER BY q.gsis_id DESC;
 
     /**
      * Get the individual player data, shows how much an individual player is contributing to a team's offense.
+     * @param $selectedWeek - The week in which you wish to see the plays, defaults to null (which grabs the currentWeek).
      * @return array
      */
-    public function getPlayerData()
+    public function getPlayerData($selectedWeek = null)
     {
-        $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute("
+        $query = "
 SELECT
   q.*,
   (q.yards / (SUM(q.yards)
@@ -133,7 +153,7 @@ FROM (
          -- Uncomment when season starts!!!
          -- *************************************
          --JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
-         JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
+         JOIN public.meta m ON (g.week = [[weekSelected]] AND g.season_year = m.season_year AND g.season_type = m.season_type)
        WHERE
       g.start_time < now()
        GROUP BY g.gsis_id, p.full_name, p.first_name, p.last_name, t.team_id, t.city, t.name, tc.primary_color, tc.border_color
@@ -168,21 +188,35 @@ FROM (
          -- Uncomment when season starts!!!
          -- *************************************
          --JOIN public.meta m ON (g.week = 8 AND g.season_year = 2014)
-         JOIN public.meta m ON (g.week = m.week AND g.season_year = m.season_year AND g.season_type = m.season_type)
+         JOIN public.meta m ON (g.week = [[weekSelected]] AND g.season_year = m.season_year AND g.season_type = m.season_type)
        WHERE
       g.start_time < now()
        GROUP BY g.gsis_id, p.full_name, p.first_name, p.last_name, t.team_id, t.city, t.name, tc.secondary_color, tc.border_color
      ) q
 WHERE q.yards > 0
 ORDER BY game DESC, home_team DESC, play_type, full_name ASC;
-"
-        );
+        ";
+        $query = self::_filterWeek($query, $selectedWeek);
+        $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute($query);
         $resultSet->buffer();
         $results = array();
         foreach ($resultSet as $row) {
             array_push($results, $row);
         }
         return $results;
+    }
+
+    public function getCurrentWeek()
+    {
+        $resultSet = $this->tableGateway->getAdapter()->driver->getConnection()->execute(
+            "SELECT week FROM public.meta"
+        );
+        $resultSet->buffer();
+        $currentWeek = null;
+        foreach ($resultSet as $row) {
+            $currentWeek = $row['week'];
+        }
+        return $currentWeek;
     }
 
     public function fetchAll()

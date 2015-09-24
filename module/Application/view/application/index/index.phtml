@@ -1,5 +1,5 @@
 <div ng-app="home-page" ng-controller="HomePageCtrl"
-    <?php echo $this->ngInit(array('playerData', 'gameData')); ?>>
+    <?php echo $this->ngInit(array('currentWeek')); ?>>
     <div style="width:100%;height:50px">
         <div style="float:left; display: inline-block; width:60%; padding-left:15px">
             <ul class="nav nav-tabs" role="tablist">
@@ -12,6 +12,17 @@
                     <a href="#drives" aria-controls="drives" role="tab" data-toggle="tab" ng-click="currentTab = 'drives'">
                         Team Drives
                     </a>
+                </li>
+                <li style="margin-top:.5em;border:1px;float:right">
+                    <span style="font-size:1.2em;font-weight:bold">Week Filter: </span>
+                    <ui-select style="min-width:110px" ng-model="$parent.selectedWeek" theme="select2" ng-disabled="disabled" title="Select a Week">
+                        <ui-select-match placeholder="Select a Week">
+                            {{$select.selected.text}}
+                        </ui-select-match>
+                        <ui-select-choices repeat="week in weekOptions track by $index">
+                            <div ng-bind-html="week.text | highlight: $select.search"></div>
+                        </ui-select-choices>
+                    </ui-select>
                 </li>
             </ul>
         </div>
@@ -56,21 +67,21 @@
                             <table class="scoreboard">
                                 <tbody>
                                 <tr>
-                                    <td>{{gameData[(key - 1) / 2].home_team}}</td>
+                                    <td>{{gameDataCheck[(key - 1) / 2].home_team}}</td>
                                     <td></td>
-                                    <td>{{gameData[(key - 1) / 2].away_team}}</td>
+                                    <td>{{gameDataCheck[(key - 1) / 2].away_team}}</td>
                                 </tr>
                                 <tr style="font-size:2.5em; font-weight: bold">
-                                    <td>{{gameData[(key - 1) / 2].home_score}}</td>
+                                    <td>{{gameDataCheck[(key - 1) / 2].home_score}}</td>
                                     <td>-</td>
-                                    <td>{{gameData[(key - 1) / 2].away_score}}</td>
+                                    <td>{{gameDataCheck[(key - 1) / 2].away_score}}</td>
                                 </tr>
                                 <tr style="font-size:1.5em">
                                     <td colspan="3">
-                                        <span ng-show="!gameData[(key - 1) / 2].finished">
-                                            {{getQuarterTime(gameData[(key - 1) / 2].time)}}
+                                        <span ng-show="!gameDataCheck[(key - 1) / 2].finished">
+                                            {{getQuarterTime(gameDataCheck[(key - 1) / 2].time)}}
                                         </span>
-                                        <span ng-show="gameData[(key - 1) / 2].finished">
+                                        <span ng-show="gameDataCheck[(key - 1) / 2].finished">
                                             Final
                                         </span>
                                     </td>

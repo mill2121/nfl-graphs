@@ -1,11 +1,12 @@
 (function () {
     "use strict";
     var app;
-    app = angular.module('home-page', ['highcharts-ng', 'ui.bootstrap'])
+    app = angular.module('home-page', ['highcharts-ng', 'ui.select', 'ui.bootstrap', 'ngSanitize'])
         .controller('HomePageCtrl', function ($scope, $http, $timeout) {
             $scope.currentTab = 'offense';
             $scope.driveFilter = 'all';
             $scope.refreshTime = 30000;
+            $scope.selectedWeek = {};
             $scope.pageLoad = true;
 
             var playerDataWatch = $scope.$watch('playerData', function (playerData) {
@@ -16,12 +17,34 @@
                 }
             });
 
-            var gameDataWatch = $scope.$watch('gameData', function (gameData) {
+            var gameDataWatch = $scope.$watch('gameDataCheck', function (gameData) {
                 if (gameData) {
-                    document.title = 'NFL Dashboard - Week ' + gameData[0].week;
                     $scope.gameDataCheck = angular.copy(gameData);
                     $scope.loadGameData(gameData);
                     gameDataWatch();
+                }
+            });
+
+            $scope.$watch('currentWeek', function (currentWeek) {
+                if (currentWeek) {
+                    document.title = 'NFL Dashboard - Week ' + currentWeek;
+                    $scope.selectedWeek = {
+                        id: currentWeek,
+                        text: "Week " + currentWeek
+                    };
+                    $scope.getWeekOptions(currentWeek);
+                }
+            });
+
+            $scope.$watch('selectedWeek', function (currentWeek) {
+                if (currentWeek) {
+                    if ($scope.currentTab == 'offense') {
+                        $timeout.cancel($scope.offenseTimer);
+                        $scope.loadTeamOffense(true);
+                    } else if ($scope.currentTab == 'drives') {
+                        $timeout.cancel($scope.drivesTimer);
+                        $scope.loadDrives(true);
+                    }
                 }
             });
 
@@ -32,7 +55,7 @@
                 }
             });
 
-            $scope.$watch('currentTab', function (currentTab) {
+            $scope.$watch('currentTab', function (currentTab, oldTab) {
                 if (!$scope.pageLoad) {
                     if (currentTab == 'offense') {
                         $timeout.cancel($scope.drivesTimer);
@@ -43,11 +66,20 @@
                     }
                 } else {
                     $scope.pageLoad = false;
-                    $scope.offenseTimer = $timeout(function () {
-                        $scope.loadTeamOffense(false);
-                    }, $scope.refreshTime);
                 }
             });
+
+            /**
+             * Get the list of weeks that a user can choose from
+             * @param currentWeek
+             */
+            $scope.getWeekOptions = function(currentWeek) {
+                var i;
+                $scope.weekOptions = [];
+                for (i = 1; i <= currentWeek; i++) {
+                    $scope.weekOptions.push({id: i, text: 'Week ' + i});
+                }
+            };
 
             /**
              * Get the play data put into the fieldPossessionConfig necessary for rendering the graphs
@@ -68,18 +100,16 @@
                 if (initialLoad) {
                     $scope.loadingOffenseData = true;
                 }
-                $http.post("application/index/get-player-data")
-                    .success(function (data) {
+                $http.post("application/index/get-player-data", {
+                    selectedWeek: $scope.selectedWeek.id
+                }).success(function (data) {
                         $scope.loadingOffenseData = false;
                         if (
                             !angular.equals($scope.playerDataCheck, data.playerData)
                             || !angular.equals($scope.gameDataCheck, data.gameData)
                         ) {
-                            console.log(angular.equals($scope.playerData, data.playerData));
-
                             $scope.playerDataCheck = angular.copy(data.playerData);
                             $scope.gameDataCheck = angular.copy(data.gameData);
-
                             $scope.loadPlayerData(data.playerData);
                             $scope.loadGameData(data.gameData);
                         }
@@ -122,7 +152,8 @@
                     $scope.loadingPlayData = true;
                 }
                 $http.post("application/index/get-play-data", {
-                    driveFilter: $scope.driveFilter
+                    driveFilter: $scope.driveFilter,
+                    selectedWeek: $scope.selectedWeek.id
                 }).success(function (data) {
                     $scope.loadingPlayData = false;
                     if (!$scope.playData || !angular.equals($scope.playData, data.playData)) {
