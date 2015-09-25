@@ -27,11 +27,10 @@
             </ul>
         </div>
         <div ng-show="currentTab == 'offense'">
-            <div style="float:left; display: inline-block; width:19%; text-align:center; font-size:1.25em; text-decoration: underline">
+<!--            <div style="float:left; display: inline-block; width:19%; text-align:center; font-size:1.25em; text-decoration: underline">
                 <span>Scoreboard</span>
-            </div>
-            <div style="float:left; display: inline-block; width:20%; text-align:center; font-size:1.25em; text-decoration: underline;">
-                <span>Current Drive</span>
+            </div>-->
+            <div style="float:left; display: inline-block; width:30%; text-align:center; font-size:1.25em; text-decoration: underline;">
             </div>
         </div>
         <div ng-show="currentTab == 'drives'" style="float:right;display:inline-block;margin-right:30px">
@@ -62,7 +61,7 @@
                         id="chart{{key}}"
                         config="chartConfigs[key]">
                     </highchart>
-                    <div ng-if="(key % 2)" style="float:left;display: inline-block; width:39%">
+                    <div ng-if="(key % 2) && gaugeConfigs[(key - 1) / 2] !== null" style="float:left;display: inline-block; width:39%">
                         <div style="width:50%; float:left;display: inline-block;">
                             <table class="scoreboard">
                                 <tbody>
@@ -89,14 +88,72 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div style="width:50%; float:left; display:inline-block; margin-top:20px; min-height:240px">
+                        <div style="width:50%; float:left; display:inline-block; min-height:240px">
                             <highchart
-                                ng-if="gaugeConfigs[(key - 1) / 2] !== null"
+                                style="margin-top:20px;"
                                 id="gauge{{key}}"
                                 config="gaugeConfigs[(key - 1) / 2]">
                             </highchart>
-                            <div ng-if="gaugeConfigs[(key - 1) / 2] === null" class="final-score">
-                                <!-- TODO: Need to put something here if the game is finished -->
+                        </div>
+                        <div class="clearfix"></div>
+                    </div>
+                    <div ng-if="(key % 2) && gaugeConfigs[(key - 1) / 2] === null" style="float:left;display: inline-block; width:39%;min-height:260px">
+                        <div style="width:100%;text-align:center">
+                            <div style="float:left; display:inline-block;width:50%">
+                                <table class="scoreboard">
+                                    <tbody>
+                                    <tr>
+                                        <td>{{gameDataCheck[(key - 1) / 2].home_team}}</td>
+                                        <td></td>
+                                        <td>{{gameDataCheck[(key - 1) / 2].away_team}}</td>
+                                    </tr>
+                                    <tr style="font-size:2.5em; font-weight: bold">
+                                        <td>{{gameDataCheck[(key - 1) / 2].home_score}}</td>
+                                        <td>-</td>
+                                        <td>{{gameDataCheck[(key - 1) / 2].away_score}}</td>
+                                    </tr>
+                                    <tr style="font-size:1.5em">
+                                        <td colspan="3">
+                                        <span ng-show="!gameDataCheck[(key - 1) / 2].finished">
+                                            {{getQuarterTime(gameDataCheck[(key - 1) / 2].time)}}
+                                        </span>
+                                        <span ng-show="gameDataCheck[(key - 1) / 2].finished">
+                                            Final
+                                        </span>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="winnerImg{{(key - 1) / 2}}"
+                                 style="float:left; display:inline-block;width:50%; vertical-align: middle; margin-top:15px;">
+                            </div>
+                        </div>
+                        <br/>
+                        <div style="width:100%;float:left;margin-top:15px;text-align:center">
+                            <div>
+                                <table class="table passerStats">
+                                    <thead>
+                                        <tr style="border:1px solid black;">
+                                            <th>Name</th>
+                                            <th>CMP/ATT</th>
+                                            <th>PCT</th>
+                                            <th>YDS</th>
+                                            <th>TD(s)</th>
+                                            <th>INT(s)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr ng-repeat="passer in passerData[(key - 1) / 2]">
+                                            <td>{{passer.name}}</td>
+                                            <td>{{passer.cmp}}/{{passer.att}}</td>
+                                            <td>{{passer.pct}}%</td>
+                                            <td>{{passer.yds}}</td>
+                                            <td>{{passer.tds}}</td>
+                                            <td>{{passer.ints}}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                         <div class="clearfix"></div>

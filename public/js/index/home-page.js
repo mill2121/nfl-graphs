@@ -7,6 +7,7 @@
             $scope.driveFilter = 'all';
             $scope.refreshTime = 30000;
             $scope.selectedWeek = {};
+            $scope.gamesCurrentlyOn = false;
             $scope.pageLoad = true;
 
             var playerDataWatch = $scope.$watch('playerData', function (playerData) {
@@ -112,6 +113,7 @@
                             $scope.gameDataCheck = angular.copy(data.gameData);
                             $scope.loadPlayerData(data.playerData);
                             $scope.loadGameData(data.gameData);
+                            $scope.loadPasserData(data.passerData);
                         }
                         $scope.offenseTimer = $timeout(function () {
                             $scope.loadTeamOffense(false);
@@ -137,9 +139,39 @@
              */
             $scope.loadGameData = function (gameData) {
                 $scope.gaugeConfigs = [];
-                angular.forEach(gameData, function (game) {
+                $scope.gamesLoaded = true;
+                angular.forEach(gameData, function (game, key) {
+                    var imgTag = '<img id="winnerImg{{(key - 1) / 2}}" height="60px" src="' + $scope.gameDataCheck[key].winner_logo_url + '" />';
+                    console.log($('#winnerImg' + key));
+                    console.log(imgTag);
+                    $timeout(function () {
+                        $('#winnerImg' + key).html(imgTag);
+                    });
+                    if (game.finished === false) {
+                        $scope.gamesCurrentlyOn = true;
+                    }
                     $scope.gaugeConfigs.push($scope.formatGaugeConfig(game));
                 });
+            };
+
+            /**
+             * Format the passerData into the proper groups
+             * @param passerData
+             */
+            $scope.loadPasserData = function (passerData) {
+                $scope.passerData = [];
+                var game = passerData[0].game, gameStats = [];
+                angular.forEach(passerData, function (passer) {
+                    if (game !== passer.game) {
+                        game = passer.game;
+                        $scope.passerData.push(gameStats);
+                        gameStats = [];
+                    }
+                    gameStats.push(passer);
+                });
+                if (gameStats && gameStats.length > 0) {
+                    $scope.passerData.push(gameStats);
+                }
             };
 
             /**

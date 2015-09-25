@@ -29,9 +29,11 @@ class IndexController extends AbstractActionController
         $selectedWeek = $data['selectedWeek'];
         $playerData = $this->getPlayerTable()->getPlayerData($selectedWeek);
         $gameData = $this->getPlayerTable()->getGameData($selectedWeek);
+        $passerData = $this->getPlayerTable()->getPasserData($selectedWeek);
         return new JsonModel(array(
             'playerData' => $playerData,
-            'gameData' => $gameData
+            'gameData' => $gameData,
+            'passerData' => $passerData
         ));
     }
 

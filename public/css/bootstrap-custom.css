@@ -120,6 +120,31 @@
     margin: 0 auto;
 }
 
+.passerStats{
+    border:1px solid black;
+    background-color:white;
+    padding-left:10%;
+    padding-right:10%;
+}
+
+.passerStats > thead {
+    background-color:#002C5F;
+    color:white;
+}
+
+.passerStats > thead > tr > th {
+    border:1px solid black;
+}
+
+.passerStats > tbody > tr {
+    border:1px solid black;
+}
+
+.passerStats > tbody > tr > td {
+    border:1px solid black;
+    color:#005A8B;
+}
+
 .final-score {
     color: #000000;
     font-family: Tahoma,Verdana,Segoe,sans-serif;
