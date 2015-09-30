@@ -115,9 +115,11 @@
                             $scope.loadGameData(data.gameData);
                             $scope.loadPasserData(data.passerData);
                         }
-                        $scope.offenseTimer = $timeout(function () {
-                            $scope.loadTeamOffense(false);
-                        }, $scope.refreshTime);
+                        if ($scope.gamesCurrentlyOn) {
+                            $scope.offenseTimer = $timeout(function () {
+                                $scope.loadTeamOffense(false);
+                            }, $scope.refreshTime);
+                        }
                 });
             };
 
@@ -192,9 +194,11 @@
                         $scope.playData = data.playData;
                         $scope.initializePlayData();
                     }
-                    $scope.drivesTimer = $timeout(function () {
-                        $scope.loadDrives(false);
-                    }, $scope.refreshTime);
+                    if ($scope.gamesCurrentlyOn) {
+                        $scope.drivesTimer = $timeout(function () {
+                            $scope.loadDrives(false);
+                        }, $scope.refreshTime);
+                    }
                 });
             };
 
