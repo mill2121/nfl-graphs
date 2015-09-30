@@ -122,6 +122,7 @@
 
 .passerStats{
     border:1px solid black;
+    border-collapse: collapse;
     background-color:white;
     padding-left:10%;
     padding-right:10%;
@@ -133,15 +134,14 @@
 }
 
 .passerStats > thead > tr > th {
-    border:1px solid black;
+    border-right: 1px solid black;
+    border-bottom:none !important;
 }
 
-.passerStats > tbody > tr {
-    border:1px solid black;
-}
 
 .passerStats > tbody > tr > td {
-    border:1px solid black;
+    border-right: 1px solid;
+    border-color:black !important;
     color:#005A8B;
 }
 
